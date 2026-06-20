@@ -1,0 +1,256 @@
+/* ========== Responsive ========== */
+@media (max-width: 768px) {
+    .layer-sidebar {
+        width: min(320px, 86vw);
+    }
+
+    /* ═══ تخطيط Zoom Earth للموبايل ═══ */
+
+    /* مؤشر الإحداثيات: مخفي (الإحداثيات في لوحة الطقس) */
+    .location-indicator {
+        display: none;
+    }
+
+    /* ── Legend: شريط أفقي بعرض كامل في الأعلى (كـ Zoom Earth) ── */
+    .central-legend {
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: auto;
+        width: 100%;
+        border-radius: 0 0 14px 14px;
+        border-top: none;
+        padding: 6px 14px 7px;
+    }
+
+    .central-legend .legend-title {
+        display: none;            /* شريط نحيف كـ Zoom Earth */
+    }
+
+    .central-legend .legend-bar {
+        height: 12px;
+        border-radius: 4px;
+    }
+
+    .central-legend .legend-labels {
+        font-size: 10px;
+        margin-top: 3px;
+    }
+
+    /* ── زر الطبقات: دائري أسفل اليسار ── */
+    .layer-controls-toggle,
+    .layer-controls-toggle.with-info-panel {
+        top: auto;
+        bottom: 70px;
+        left: 12px;
+        width: 46px;
+        height: 46px;
+        border-radius: 50%;
+    }
+
+    /* ── Toolbar: أزرار دائرية أسفل اليمين، الأساسية فقط ── */
+    .right-toolbar {
+        top: auto;
+        bottom: 70px;
+        right: 12px;
+        flex-direction: column;
+        gap: 8px;
+        padding: 0;
+        background: transparent;
+        border: none;
+        box-shadow: none;
+        backdrop-filter: none;
+        -webkit-backdrop-filter: none;
+    }
+
+    .right-toolbar .tb-secondary {
+        display: none;            /* إخفاء تكبير/تصغير/ملء الشاشة/مشاركة/قائمة */
+    }
+
+    .toolbar-btn {
+        width: 46px;
+        height: 46px;
+        font-size: 18px;
+        border-radius: 50%;
+        background: var(--bg-panel);
+        border: 1px solid var(--border-color);
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.28);
+    }
+
+    /* ── اللوحات: bottom-sheet فوق شريط الوقت ── */
+    .weather-info-panel,
+    .layer-controls,
+    .layer-controls.with-info-panel {
+        top: auto;
+        left: 8px;
+        right: 8px;
+        bottom: 66px;
+        width: auto;
+        max-width: none;
+        max-height: calc(100dvh - 66px - 56px);
+        border-radius: 16px;
+    }
+
+    /* عند فتح لوحة: أخفِ الأزرار العائمة والـ legend لتفادي التراكب */
+    .weather-map-container.panel-overlay-open .layer-status-panel,
+    .weather-map-container.panel-overlay-open .central-legend,
+    .weather-map-container.panel-overlay-open .right-toolbar,
+    .weather-map-container.panel-overlay-open .layer-controls-toggle {
+        display: none;
+    }
+
+    .layer-status-panel {
+        top: 44px;
+        left: 8px;
+        right: 8px;
+        width: auto;
+        padding: 8px 10px;
+    }
+
+    .layer-status-desc {
+        display: none;
+    }
+
+    .layer-status-meta,
+    .layer-status-overlays {
+        margin-top: 6px;
+    }
+
+    /* ── شريط الوقت أسفل الشاشة ── */
+    .time-slider-container {
+        bottom: 8px;
+        width: calc(100vw - 16px);
+        gap: 5px;
+        pointer-events: none;
+    }
+
+    .time-slider-container > * {
+        pointer-events: auto;
+    }
+
+    .time-slider-track-shell {
+        width: min(420px, 88vw);
+    }
+
+    .zoom-time-controller {
+        flex-direction: row;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 5px;
+    }
+
+    .zoom-time-card {
+        width: auto;
+        max-width: calc(100vw - 16px);
+        padding: 5px 6px;
+        gap: 3px;
+    }
+
+    .zoom-time-speed { order: 2; }
+    .zoom-time-relative { order: 3; }
+
+    .time-selector-value {
+        font-size: 11px;
+        line-height: 1.1;
+    }
+
+    .time-selector { min-width: 54px; }
+    .time-selector-hour { min-width: 66px; }
+
+    .time-nav-btn,
+    .time-play-btn {
+        width: 28px;
+        height: 28px;
+    }
+
+    /* Search panel أسفل الـ toolbar مباشرةً */
+    .search-panel {
+        top: 58px;
+        right: 8px;
+        left: 8px;
+        width: auto;
+        max-width: none;
+    }
+
+    .search-results {
+        max-height: min(50vh, 360px);
+    }
+}
+
+@media (max-width: 560px) {
+    /* لوحة حالة الطبقة أعلى الشاشة، تُخفى عند فتح أي لوحة */
+    .layer-status-panel {
+        top: 44px;
+        left: 8px;
+        right: 8px;
+        width: auto;
+        max-height: 112px;
+        overflow: hidden;
+        padding: 8px;
+    }
+
+    .layer-status-title {
+        font-size: 12px;
+    }
+
+    .layer-status-meta span,
+    .layer-status-overlays span {
+        font-size: 9px;
+        padding: 2px 6px;
+    }
+
+    .layer-controls.collapsed {
+        width: auto;
+    }
+
+    .layer-control-item {
+        min-height: 34px;
+        grid-template-columns: 28px minmax(0, 1fr) 34px;
+        padding: 2px 6px;
+    }
+
+    .time-slider-track-shell {
+        width: min(360px, 92vw);
+    }
+
+    .zoom-time-card {
+        max-width: 96vw;
+        overflow: hidden;
+    }
+
+    .zoom-time-speed {
+        max-width: 96vw;
+    }
+
+    .zoom-speed-btn {
+        min-width: 22px;
+        height: 22px;
+    }
+}
+
+@media (max-width: 420px) {
+    .layer-status-panel {
+        max-height: 104px;
+    }
+
+    .layer-status-meta span:nth-child(2) {
+        display: none;
+    }
+
+    .time-slider-container {
+        bottom: 6px;
+    }
+
+    .zoom-time-relative {
+        display: none;
+    }
+
+    .time-selector {
+        min-width: 48px;
+    }
+
+    .time-selector-hour {
+        min-width: 58px;
+    }
+}
+

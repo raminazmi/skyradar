@@ -1,0 +1,191 @@
+/* ========== Weather Info Panel (right side) ========== */
+.weather-info-panel {
+    position: absolute;
+    top: 82px;
+    right: 72px;
+    width: 280px;
+    max-height: calc(100vh - 188px);
+    background: rgba(28, 33, 45, 0.94);
+    backdrop-filter: blur(22px);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 14px;
+    box-shadow: 0 20px 54px rgba(0, 0, 0, 0.42);
+    z-index: 750;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+.weather-panel-header {
+    padding: 10px 14px 8px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    position: relative;
+    gap: 10px;
+}
+
+.panel-close-btn {
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(255, 255, 255, 0.06);
+    border: none;
+    border-radius: 8px;
+    color: inherit;
+    cursor: pointer;
+    font-size: 14px;
+    transition: all 0.18s ease;
+    flex-shrink: 0;
+}
+
+.panel-close-btn:hover {
+    background: rgba(255, 80, 80, 0.16);
+    color: #ff8d8d;
+}
+
+.weather-panel-location {
+    flex: 1;
+    min-width: 0;
+}
+
+.weather-panel-coords {
+    font-size: 14px;
+    font-weight: 800;
+    letter-spacing: 0.01em;
+    direction: ltr;
+}
+
+.weather-panel-meta {
+    display: flex;
+    justify-content: space-between;
+    gap: 6px;
+    margin-top: 4px;
+    font-size: 11px;
+    color: rgba(230, 237, 243, 0.68);
+}
+
+.weather-panel-current {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 8px 14px;
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.03), rgba(255, 255, 255, 0));
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.weather-panel-warning {
+    margin: 8px 12px 0;
+    padding: 7px 9px;
+    border-radius: 9px;
+    background: rgba(255, 176, 32, 0.12);
+    border: 1px solid rgba(255, 176, 32, 0.2);
+    color: #ffd27a;
+    font-size: 11px;
+    line-height: 1.45;
+}
+
+.weather-panel-current-main {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-width: 0;
+}
+
+.weather-panel-badge {
+    min-width: 42px;
+    padding: 4px 8px;
+    border-radius: 999px;
+    background: linear-gradient(135deg, #95f3a4 0%, #dfff7e 100%);
+    color: #1a270d;
+    font-size: 18px;
+    font-weight: 900;
+    line-height: 1;
+    text-align: center;
+}
+
+.weather-panel-current-copy {
+    min-width: 0;
+}
+
+.weather-panel-condition {
+    font-size: 13px;
+    font-weight: 700;
+}
+
+.weather-panel-feels {
+    margin-top: 2px;
+    font-size: 11px;
+    color: rgba(230, 237, 243, 0.64);
+}
+
+.weather-panel-current-side {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 6px;
+    flex-shrink: 0;
+}
+
+.weather-panel-icon {
+    font-size: 22px;
+    line-height: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    border-radius: 10px;
+    background: rgba(11, 15, 20, 0.55);
+}
+
+.weather-icon {
+    display: block;
+    object-fit: contain;
+}
+
+.weather-panel-current-time {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 11px;
+    font-weight: 700;
+    color: rgba(230, 237, 243, 0.74);
+}
+
+.weather-panel-stats {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 6px;
+    padding: 8px 12px 10px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.weather-panel-stat {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    padding: 6px 4px;
+    background: rgba(255, 255, 255, 0.04);
+    border-radius: 10px;
+    font-size: 11px;
+    font-weight: 700;
+    color: rgba(230, 237, 243, 0.78);
+}
+
+.weather-panel-table-head {
+    display: grid;
+    grid-template-columns: 48px 48px 46px 1fr;
+    gap: 4px;
+    align-items: center;
+    padding: 6px 14px 4px;
+    font-size: 10px;
+    font-weight: 700;
+    color: rgba(230, 237, 243, 0.46);
+    direction: ltr;
+}

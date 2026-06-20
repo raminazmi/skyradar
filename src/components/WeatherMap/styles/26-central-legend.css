@@ -1,0 +1,51 @@
+/* ========== Central Legend ========== */
+.central-legend {
+    position: absolute;
+    bottom: 16px;
+    left: 16px;
+    z-index: 550; /* أعلى من أسماء المدن 520 */
+    background: rgba(15, 23, 42, 0.85);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 10px;
+    padding: 6px 12px;
+    width: 240px;
+    box-shadow: 0 6px 24px rgba(0, 0, 0, 0.5);
+    animation: fadeIn 0.4s ease;
+    pointer-events: auto;
+}
+
+.legend-content {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.legend-title {
+    font-size: 10px;
+    font-weight: 700;
+    color: rgba(255, 255, 255, 0.7);
+    text-align: center;
+}
+
+.legend-bar {
+    height: 6px;
+    width: 100%;
+    border-radius: 3px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.legend-labels {
+    display: flex;
+    justify-content: space-between;
+    font-size: 9px;
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.5);
+    direction: ltr;
+}
+
+.legend-label {
+    flex: 1;
+    text-align: center;
+}
+

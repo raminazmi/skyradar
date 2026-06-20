@@ -1,0 +1,228 @@
+
+.weather-map-container.light .layer-control-item {
+    color: var(--text-primary);
+}
+
+.weather-map-container.light .layer-control-item:hover {
+    background: var(--row-hover);
+}
+
+.weather-map-container.light .layer-control-item.active {
+    background: rgba(102, 126, 234, 0.08);
+    border-color: rgba(102, 126, 234, 0.22);
+}
+
+.weather-map-container.light .layer-emoji {
+    background: var(--stat-bg);
+}
+
+.weather-map-container.light .layer-controls-extras {
+    border-top-color: var(--divider);
+}
+
+.weather-map-container.light .extra-btn,
+.weather-map-container.light .clear-all-btn {
+    background: var(--stat-bg);
+    color: var(--text-primary);
+}
+
+.weather-map-container.light .clear-all-btn {
+    background: rgba(220, 38, 38, 0.06);
+    color: #dc2626;
+}
+
+.weather-map-container.light .icon-btn {
+    background: var(--stat-bg);
+    color: var(--text-secondary);
+}
+
+.weather-map-container.light .layer-controls-list .motion-summary {
+    color: var(--text-secondary);
+}
+
+/* ── Right Toolbar ── */
+.weather-map-container.light .right-toolbar {
+    background: var(--panel-bg);
+    border-color: var(--panel-border);
+    box-shadow: var(--panel-shadow);
+}
+
+.weather-map-container.light .toolbar-btn {
+    color: var(--text-primary);
+}
+
+.weather-map-container.light .toolbar-btn:hover {
+    background: var(--row-hover);
+    color: #667eea;
+}
+
+.weather-map-container.light .toolbar-divider {
+    background: var(--divider);
+}
+
+/* ── Location Indicator ── */
+.weather-map-container.light .location-indicator {
+    background: var(--panel-bg);
+    border-color: var(--panel-border);
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+    color: var(--text-primary);
+}
+
+/* ── Layer Sidebar ── */
+.weather-map-container.light .layer-sidebar {
+    background: rgba(255, 255, 255, 0.97);
+    border-color: var(--panel-border);
+    color: var(--text-primary);
+}
+
+.weather-map-container.light .sidebar-header {
+    border-bottom-color: var(--divider);
+}
+
+.weather-map-container.light .sidebar-close {
+    background: var(--stat-bg);
+    color: var(--text-secondary);
+}
+
+.weather-map-container.light .sidebar-models {
+    border-bottom-color: var(--divider);
+}
+
+.weather-map-container.light .model-option {
+    background: var(--stat-bg);
+    color: var(--text-primary);
+}
+
+.weather-map-container.light .model-option:hover {
+    background: var(--row-hover);
+}
+
+.weather-map-container.light .layer-item {
+    color: var(--text-primary);
+}
+
+.weather-map-container.light .layer-item:hover {
+    background: var(--row-hover);
+}
+
+.weather-map-container.light .layer-item.active {
+    background: rgba(102, 126, 234, 0.08);
+    border-color: rgba(102, 126, 234, 0.22);
+}
+
+.weather-map-container.light .layer-icon-wrap {
+    background: var(--stat-bg);
+}
+
+.weather-map-container.light .sidebar-footer {
+    border-top-color: var(--divider);
+}
+
+.weather-map-container.light .theme-btn {
+    background: var(--stat-bg);
+    border-color: var(--panel-border);
+    color: var(--text-secondary);
+}
+
+.weather-map-container.light .sidebar-section-label {
+    color: var(--text-muted);
+}
+
+.weather-map-container.light .sidebar-section-divider {
+    background: var(--divider);
+}
+
+/* ── Settings Panel ── */
+.weather-map-container.light .settings-panel,
+.weather-map-container.light .settings-overlay + .settings-panel {
+    background: rgba(255, 255, 255, 0.97);
+    border-color: var(--panel-border);
+    color: var(--text-primary);
+}
+
+/* ── Search Panel ── */
+.weather-map-container.light .search-panel {
+    background: var(--panel-bg);
+    border-color: var(--panel-border);
+    box-shadow: var(--panel-shadow);
+    color: var(--text-primary);
+}
+
+.weather-map-container.light .search-input {
+    background: var(--stat-bg);
+    border-color: var(--panel-border);
+    color: var(--text-primary);
+}
+
+.weather-map-container.light .search-input::placeholder {
+    color: var(--text-muted);
+}
+
+.weather-map-container.light .search-icon {
+    color: var(--text-muted);
+}
+
+.weather-map-container.light .search-result-item {
+    color: var(--text-primary);
+    border-bottom-color: var(--divider);
+}
+
+.weather-map-container.light .search-result-item:hover {
+    background: var(--row-hover);
+}
+
+.weather-map-container.light .result-sub,
+.weather-map-container.light .result-country,
+.weather-map-container.light .result-coords {
+    color: var(--text-muted);
+}
+
+.weather-map-container.light .search-empty,
+.weather-map-container.light .search-loading {
+    color: var(--text-secondary);
+}
+
+/* ── Info overlay (عن راصد) ── */
+.weather-map-container.light .info-panel-content {
+    background: rgba(255, 255, 255, 0.97);
+    border-color: var(--panel-border);
+    color: var(--text-primary);
+}
+
+.weather-map-container.light .info-panel-header {
+    border-bottom-color: var(--divider);
+}
+
+.weather-map-container.light .close-btn {
+    color: var(--text-secondary);
+}
+
+.weather-map-container.light .info-section h3 {
+    color: #667eea;
+}
+
+/* ── Layer Status Panel ── */
+.weather-map-container.light .layer-status-panel {
+    background: rgba(255, 255, 255, 0.92);
+    border-color: var(--panel-border);
+    box-shadow: var(--panel-shadow);
+    color: var(--text-primary);
+}
+
+.weather-map-container.light .layer-status-desc {
+    color: var(--text-secondary);
+}
+
+.weather-map-container.light .layer-status-meta span,
+.weather-map-container.light .layer-status-overlays span {
+    background: var(--stat-bg);
+    border-color: var(--panel-border);
+    color: var(--text-secondary);
+}
+
+.weather-map-container.light .layer-status-warning {
+    background: rgba(217, 119, 6, 0.08);
+    border-color: rgba(217, 119, 6, 0.20);
+    color: #92400e;
+}
+

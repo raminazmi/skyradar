@@ -1,0 +1,33 @@
+/* ========== Leaflet customization ========== */
+.custom-marker {
+    background: transparent;
+    border: none;
+}
+
+.marker-pin {
+    width: 20px;
+    height: 20px;
+    background: #ff4757;
+    border: 3px solid white;
+    border-radius: 50%;
+    box-shadow: 0 0 0 4px rgba(255, 71, 87, 0.3);
+    animation: markerPulse 2s infinite;
+}
+
+@keyframes markerPulse {
+
+    0%,
+    100% {
+        box-shadow: 0 0 0 4px rgba(255, 71, 87, 0.3);
+    }
+
+    50% {
+        box-shadow: 0 0 0 12px rgba(255, 71, 87, 0);
+    }
+}
+
+/* أخفينا أزرار التكبير الافتراضية لأن لدينا أزرار مخصصة */
+.leaflet-control-zoom {
+    display: none !important;
+}
+

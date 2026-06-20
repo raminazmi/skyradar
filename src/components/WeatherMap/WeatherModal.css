@@ -1,0 +1,6 @@
+/**
+ * WeatherModal.css — barrel
+ * مُقسَّم إلى وحدات في styles/modal/ (كل وحدة < 300 سطر).
+ */
+@import './styles/modal/01-modal-shell.css';
+@import './styles/modal/02-modal-states.css';

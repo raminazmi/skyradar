@@ -1,0 +1,65 @@
+/* ========== Map area ========== */
+.weather-map-main {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    position: relative;
+}
+
+.map-wrapper {
+    position: fixed;
+    inset: 0;
+    width: 100vw;
+    height: 100vh;
+    height: 100dvh;
+    overflow: hidden;
+    contain: size layout paint;
+    background: #0a0e14;
+}
+
+.weather-map {
+    position: absolute;
+    inset: 0;
+    height: 100%;
+    width: 100%;
+    background: #0a0e14;
+}
+
+.map-skeleton {
+    background:
+        radial-gradient(circle at 20% 30%, rgba(49, 119, 164, 0.36), transparent 34%),
+        radial-gradient(circle at 72% 62%, rgba(90, 170, 124, 0.28), transparent 38%),
+        #0a0e14;
+}
+
+.weather-map-container.dark .maplibregl-map {
+    background: #0a0e14;
+}
+
+.map-wrapper .maplibregl-map,
+.map-wrapper .maplibregl-canvas-container,
+.map-wrapper .maplibregl-canvas {
+    position: absolute;
+    inset: 0;
+    width: 100% !important;
+    height: 100% !important;
+}
+
+.heatmap-canvas-container,
+.wind-canvas-container,
+.layer-motion-container {
+    overflow: hidden;
+    contain: layout paint;
+    transform: translateZ(0);
+    will-change: transform;
+}
+
+.heatmap-canvas,
+.wind-canvas,
+.layer-motion-canvas {
+    display: block;
+    transform: translateZ(0);
+    will-change: opacity, transform;
+}
+

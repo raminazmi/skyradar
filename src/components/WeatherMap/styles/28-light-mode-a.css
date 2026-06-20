@@ -1,0 +1,202 @@
+/* ══════════════════════════════════════════════════════
+   LIGHT MODE — غطاء شامل لكل المكونات
+   ══════════════════════════════════════════════════════ */
+
+/* ── متغيرات اللون الأساسية ── */
+.weather-map-container.light {
+    --panel-bg:       rgba(255, 255, 255, 0.93);
+    --panel-border:   rgba(0, 0, 0, 0.10);
+    --panel-shadow:   0 8px 32px rgba(0, 0, 0, 0.12);
+    --text-primary:   #0f172a;
+    --text-secondary: #475569;
+    --text-muted:     #94a3b8;
+    --row-hover:      rgba(0, 0, 0, 0.04);
+    --row-active:     rgba(0, 0, 0, 0.08);
+    --divider:        rgba(0, 0, 0, 0.07);
+    --stat-bg:        rgba(0, 0, 0, 0.04);
+}
+
+/* ── Weather Info Panel ── */
+.weather-map-container.light .weather-info-panel {
+    background: var(--panel-bg);
+    border-color: var(--panel-border);
+    box-shadow: var(--panel-shadow);
+    color: var(--text-primary);
+}
+
+.weather-map-container.light .weather-panel-header {
+    border-bottom-color: var(--divider);
+}
+
+.weather-map-container.light .panel-close-btn {
+    background: rgba(0, 0, 0, 0.05);
+    color: var(--text-secondary);
+}
+
+.weather-map-container.light .panel-close-btn:hover {
+    background: rgba(220, 38, 38, 0.10);
+    color: #dc2626;
+}
+
+.weather-map-container.light .weather-panel-meta {
+    color: var(--text-secondary);
+}
+
+.weather-map-container.light .weather-panel-current {
+    background: rgba(0, 0, 0, 0.02);
+    border-bottom-color: var(--divider);
+}
+
+.weather-map-container.light .weather-panel-feels,
+.weather-map-container.light .weather-panel-current-time {
+    color: var(--text-secondary);
+}
+
+.weather-map-container.light .weather-panel-stats {
+    border-bottom-color: var(--divider);
+}
+
+.weather-map-container.light .weather-panel-stat {
+    background: var(--stat-bg);
+    color: var(--text-primary);
+}
+
+.weather-map-container.light .weather-panel-table-head {
+    color: var(--text-muted);
+}
+
+.weather-map-container.light .weather-panel-day-divider {
+    color: var(--text-muted);
+}
+
+.weather-map-container.light .weather-panel-rows::-webkit-scrollbar-thumb {
+    background: rgba(0, 0, 0, 0.12);
+}
+
+.weather-map-container.light .weather-panel-row:hover {
+    background: var(--row-hover);
+}
+
+.weather-map-container.light .weather-panel-row.active {
+    background: var(--row-active);
+    box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.06);
+}
+
+.weather-map-container.light .weather-panel-row-precip {
+    color: var(--text-secondary);
+}
+
+.weather-map-container.light .weather-panel-row-time {
+    color: var(--text-primary);
+}
+
+.weather-map-container.light .weather-panel-footer {
+    border-top-color: var(--divider);
+}
+
+.weather-map-container.light .weather-panel-model {
+    background: var(--stat-bg);
+    border-color: transparent;
+    color: var(--text-secondary);
+}
+
+.weather-map-container.light .weather-panel-model:hover {
+    background: rgba(0, 0, 0, 0.08);
+    color: var(--text-primary);
+}
+
+.weather-map-container.light .weather-panel-warning {
+    background: rgba(217, 119, 6, 0.10);
+    border-color: rgba(217, 119, 6, 0.22);
+    color: #92400e;
+}
+
+/* ── Time Slider / Playback controls ── */
+.weather-map-container.light .slider-track {
+    background: rgba(0, 0, 0, 0.08);
+    border-color: rgba(0, 0, 0, 0.06);
+}
+
+/* البطاقة الرئيسية + شريط السرعة + شارة الوقت النسبي */
+.weather-map-container.light .zoom-time-card,
+.weather-map-container.light .zoom-time-speed,
+.weather-map-container.light .zoom-time-relative {
+    background: var(--panel-bg);
+    border-color: var(--panel-border);
+    box-shadow: var(--panel-shadow);
+    color: var(--text-primary);
+}
+
+.weather-map-container.light .zoom-time-relative {
+    color: var(--text-secondary);
+}
+
+/* أزرار السرعة + التنقل */
+.weather-map-container.light .zoom-speed-btn,
+.weather-map-container.light .time-nav-btn {
+    background: var(--stat-bg);
+    color: var(--text-primary);
+}
+
+.weather-map-container.light .zoom-speed-btn:hover,
+.weather-map-container.light .time-nav-btn:hover,
+.weather-map-container.light .time-arrow-btn:hover {
+    background: rgba(0, 0, 0, 0.10);
+}
+
+.weather-map-container.light .time-arrow-btn {
+    color: var(--text-secondary);
+}
+
+/* السرعة النشطة وزر التشغيل يبقيان أزرق متدرّج بنص أبيض */
+.weather-map-container.light .zoom-speed-btn.active,
+.weather-map-container.light .time-play-btn {
+    color: #fff;
+}
+
+/* قيمة التاريخ/الساعة */
+.weather-map-container.light .time-selector-value {
+    color: var(--text-primary);
+}
+
+/* ── Legend Bar ── */
+.weather-map-container.light .legend-bar-container {
+    background: var(--panel-bg);
+    border-color: var(--panel-border);
+    box-shadow: var(--panel-shadow);
+    color: var(--text-primary);
+}
+
+.weather-map-container.light .legend-gradient-bar {
+    border-color: rgba(0, 0, 0, 0.08);
+}
+
+.weather-map-container.light .legend-labels {
+    color: var(--text-secondary);
+}
+
+.weather-map-container.light .legend-model-info {
+    border-top-color: var(--divider);
+    color: var(--text-secondary);
+}
+
+/* ── Central Legend ── */
+.weather-map-container.light .central-legend {
+    background: var(--panel-bg);
+    border-color: var(--panel-border);
+    box-shadow: var(--panel-shadow);
+    color: var(--text-primary);
+}
+
+/* ── Layer Controls ── */
+.weather-map-container.light .layer-controls,
+.weather-map-container.light .layer-controls-toggle {
+    background: var(--panel-bg);
+    border-color: var(--panel-border);
+    box-shadow: var(--panel-shadow);
+    color: var(--text-primary);
+}
+
+.weather-map-container.light .layer-controls-header {
+    border-bottom-color: var(--divider);
+}

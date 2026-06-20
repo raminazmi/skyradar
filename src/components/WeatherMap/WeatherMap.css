@@ -1,0 +1,46 @@
+/**
+ * WeatherMap.css — barrel
+ * مُقسَّم إلى وحدات في styles/ (كل وحدة < 300 سطر) مع الحفاظ على ترتيب الـ cascade.
+ * لا تُضِف قواعد هنا — أضِفها في الوحدة المناسبة داخل styles/.
+ */
+
+/* الأساس والحاوية */
+@import './styles/01-base.css';
+@import './styles/02-logo.css';
+@import './styles/03-sidebar.css';
+@import './styles/04-map.css';
+
+/* عناصر الخريطة العائمة */
+@import './styles/05-location-controls-a.css';
+@import './styles/06-location-controls-b.css';
+@import './styles/07-legend-bar.css';
+@import './styles/08-leaflet.css';
+@import './styles/09-arabic-dom-labels.css';
+
+/* النوافذ المنبثقة للمدن */
+@import './styles/10-city-modal-a.css';
+@import './styles/11-city-modal-b.css';
+@import './styles/12-city-popup-a.css';
+@import './styles/13-city-popup-b.css';
+
+/* المتتبعات والأدوات */
+@import './styles/14-cyclone.css';
+@import './styles/15-toolbar.css';
+@import './styles/16-search.css';
+@import './styles/17-info-modal.css';
+@import './styles/18-responsive-misc.css';
+@import './styles/19-arabic-city-labels.css';
+@import './styles/20-canvas.css';
+
+/* اللوحات */
+@import './styles/21-weather-info-forecast.css';
+@import './styles/22-settings.css';
+@import './styles/23-time-slider.css';
+@import './styles/24-weather-info-panel-a.css';
+@import './styles/25-weather-info-panel-b.css';
+@import './styles/26-central-legend.css';
+
+/* الاستجابة والوضع الفاتح (يجب أن تبقى أخيرة في الـ cascade) */
+@import './styles/27-responsive-mobile.css';
+@import './styles/28-light-mode-a.css';
+@import './styles/29-light-mode-b.css';

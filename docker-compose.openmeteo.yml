@@ -1,0 +1,41 @@
+# استضافة ذاتية لـ Open-Meteo — تُلغي حدّ الحصة المجاني وتسمح بدقة شبكة عالية.
+# التشغيل:  docker compose -f docker-compose.openmeteo.yml up -d
+# ثم زامِن بيانات النماذج (انظر docs/self-hosted-openmeteo.md).
+#
+# بعد التشغيل، اضبط في backend/.env:
+#   OPEN_METEO_BASE_URL=http://localhost:8080
+# ثم: php artisan config:clear
+
+services:
+  open-meteo:
+    image: ghcr.io/open-meteo/open-meteo:latest
+    container_name: rasid-openmeteo
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    volumes:
+      - openmeteo-data:/app/data
+    # الخادم يستمع على 8080 افتراضياً ويقرأ البيانات من /app/data
+
+  # وظيفة المزامنة: تُحمّل أحدث بيانات النموذج كل 6 ساعات (دورة GFS).
+  # عدّل قائمة المتغيّرات حسب الطبقات المطلوبة.
+  open-meteo-sync:
+    image: ghcr.io/open-meteo/open-meteo:latest
+    container_name: rasid-openmeteo-sync
+    restart: unless-stopped
+    volumes:
+      - openmeteo-data:/app/data
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        while true; do
+          /app/openmeteo-api sync ncep_gfs013 \
+            temperature_2m,relative_humidity_2m,dew_point_2m,apparent_temperature,\
+        wind_u_component_10m,wind_v_component_10m,wind_gusts_10m,precipitation,\
+        rain,snowfall,weather_code,cloud_cover,surface_pressure,visibility \
+            --past-days 1 || echo "sync failed, retrying in 1h";
+          sleep 21600;
+        done
+
+volumes:
+  openmeteo-data:

@@ -1,0 +1,247 @@
+/* ========== Modal Overlay ========== */
+.weather-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.7);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 2000;
+    backdrop-filter: blur(4px);
+    animation: fadeIn 0.3s ease-in-out;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+/* ========== Modal Content ========== */
+.weather-modal-content {
+    background: var(--bg-panel);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    max-width: 600px;
+    width: 90%;
+    max-height: 85vh;
+    overflow-y: auto;
+    animation: slideUp 0.3s ease-out;
+}
+
+.weather-modal-content::-webkit-scrollbar {
+    width: 6px;
+}
+
+.weather-modal-content::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.04);
+}
+
+.weather-modal-content::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.18);
+    border-radius: 999px;
+}
+
+@keyframes slideUp {
+    from {
+        transform: translateY(30px);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+/* ========== Modal Header ========== */
+.weather-modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    padding: 24px;
+    border-bottom: 1px solid var(--border-color);
+    gap: 16px;
+}
+
+.weather-modal-title {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex: 1;
+}
+
+.weather-modal-title .modal-icon {
+    color: var(--primary);
+    flex-shrink: 0;
+    font-size: 24px;
+}
+
+.weather-modal-title h2 {
+    margin: 0;
+    font-size: 24px;
+    font-weight: 600;
+    color: var(--text-dark);
+}
+
+.weather-modal-title .country-name {
+    margin: 4px 0 0 0;
+    font-size: 14px;
+    color: rgba(230, 237, 243, 0.7);
+}
+
+.modal-close-btn {
+    background: none;
+    border: none;
+    color: var(--text-dark);
+    cursor: pointer;
+    padding: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 8px;
+    transition: all 0.2s ease;
+    flex-shrink: 0;
+}
+
+.modal-close-btn:hover {
+    background: var(--hover-bg);
+    color: var(--primary);
+}
+
+/* ========== Modal Body ========== */
+.weather-modal-body {
+    padding: 24px;
+}
+
+.coordinates {
+    text-align: center;
+    direction: ltr;
+    margin-bottom: 20px;
+    padding: 12px;
+    background: rgba(102, 126, 234, 0.1);
+    border-radius: 8px;
+    border-left: 3px solid var(--primary);
+}
+
+.coordinates small {
+    color: var(--primary);
+    font-size: 12px;
+}
+
+/* ========== Weather Main Section ========== */
+.weather-main-section {
+    margin-bottom: 24px;
+}
+
+.temperature-display {
+    display: flex;
+    align-items: center;
+    gap: 24px;
+    padding: 20px;
+    background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
+    border-radius: 12px;
+    border: 1px solid var(--border-color);
+}
+
+.temp-value {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 48px;
+    font-weight: 700;
+    color: var(--primary);
+}
+
+.temp-value svg {
+    color: var(--primary);
+}
+
+.temp-details {
+    flex: 1;
+}
+
+.temp-details p {
+    margin: 0 0 8px 0;
+    font-size: 14px;
+    color: var(--text-dark);
+}
+
+.temp-details p:last-child {
+    margin-bottom: 0;
+}
+
+.weather-description {
+    font-size: 16px;
+    font-weight: 500;
+    color: var(--primary);
+    margin-top: 4px !important;
+}
+
+/* ========== Weather Grid ========== */
+.weather-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 16px;
+    margin-bottom: 24px;
+}
+
+.weather-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 16px;
+    background: var(--hover-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    transition: all 0.2s ease;
+}
+
+.weather-item:hover {
+    background: var(--border-color);
+    border-color: var(--primary);
+}
+
+.weather-item-icon {
+    flex-shrink: 0;
+    font-size: 24px;
+    color: var(--primary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    background: rgba(102, 126, 234, 0.1);
+    border-radius: 8px;
+}
+
+.weather-item-content {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.weather-item-content .label {
+    font-size: 12px;
+    color: rgba(230, 237, 243, 0.6);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.weather-item-content .value {
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--text-dark);
+}
+
+.weather-item-content small {
+    font-size: 11px;
+    color: rgba(230, 237, 243, 0.5);
+}
+

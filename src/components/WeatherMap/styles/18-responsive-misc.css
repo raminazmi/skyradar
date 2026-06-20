@@ -1,0 +1,19 @@
+/* ========== أصول responsive ========== */
+@media (max-width: 768px) {
+    .info-panel-content {
+        max-height: 92vh;
+    }
+}
+
+.leaflet-control-attribution {
+    background: rgba(0, 0, 0, 0.5) !important;
+    color: rgba(255, 255, 255, 0.6) !important;
+    font-size: 10px !important;
+    padding: 2px 6px !important;
+    border-radius: 4px !important;
+}
+
+.leaflet-control-attribution a {
+    color: rgba(255, 255, 255, 0.8) !important;
+}
+

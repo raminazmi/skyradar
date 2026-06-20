@@ -1,0 +1,94 @@
+/* ========== لوحة المعلومات (info modal) ========== */
+.info-panel-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(8px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 2000;
+    animation: fadeIn 0.2s ease;
+    padding: 20px;
+}
+
+.info-panel-content {
+    width: 100%;
+    max-width: 540px;
+    max-height: 85vh;
+    background: var(--bg-panel);
+    border: 1px solid var(--border-color);
+    border-radius: 16px;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    animation: fadeInUp 0.3s ease;
+    direction: rtl;
+}
+
+.info-panel-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 18px 22px;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.info-panel-header h2 {
+    margin: 0;
+    font-size: 18px;
+    font-weight: 800;
+}
+
+.info-panel-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 20px 22px;
+}
+
+.info-section {
+    margin-bottom: 20px;
+}
+
+.info-section h3 {
+    font-size: 14px;
+    font-weight: 700;
+    margin: 0 0 8px;
+    color: var(--primary);
+}
+
+.info-section p {
+    margin: 0;
+    font-size: 13px;
+    line-height: 1.7;
+    opacity: 0.85;
+}
+
+.info-section ul {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.info-section ul li {
+    font-size: 13px;
+    line-height: 1.8;
+    opacity: 0.85;
+    padding-right: 20px;
+    position: relative;
+}
+
+.info-section ul li::before {
+    content: '◀';
+    position: absolute;
+    right: 0;
+    color: var(--primary);
+    font-size: 9px;
+    top: 6px;
+}
+
+.info-section ul li strong {
+    color: inherit;
+    font-weight: 700;
+}
+

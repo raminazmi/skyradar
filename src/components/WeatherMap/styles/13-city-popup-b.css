@@ -1,0 +1,152 @@
+
+.cp-row {
+    display: grid;
+    grid-template-columns: 44px 26px 36px 40px 60px 36px;
+    gap: 2px;
+    align-items: center;
+    padding: 4px 12px;
+    font-size: 12px;
+    transition: background 0.15s;
+    direction: ltr;
+}
+
+.cp-row:hover {
+    background: rgba(255, 255, 255, 0.04);
+}
+
+.cp-row-now {
+    background: rgba(102, 126, 234, 0.14) !important;
+    border-right: 3px solid #667eea;
+}
+
+.cp-time {
+    font-weight: 700;
+    font-size: 11px;
+    color: rgba(230, 237, 243, 0.75);
+    text-align: left;
+}
+
+.cp-icon {
+    text-align: center;
+    font-size: 15px;
+}
+
+.cp-precip {
+    text-align: center;
+    font-size: 11px;
+    color: #6fb3f5;
+}
+
+.cp-temp {
+    text-align: center;
+    font-size: 13px;
+    font-weight: 800;
+    background: rgba(255, 160, 50, 0.15);
+    color: #ffb432;
+    border-radius: 8px;
+    padding: 1px 3px;
+}
+
+.cp-wind {
+    text-align: center;
+    font-size: 11px;
+    color: rgba(230, 237, 243, 0.65);
+    direction: ltr;
+}
+
+.cp-hum {
+    text-align: center;
+    font-size: 11px;
+    color: rgba(230, 237, 243, 0.55);
+}
+
+/* التذييل */
+.cp-footer {
+    display: flex;
+    gap: 4px;
+    padding: 10px 12px;
+    border-top: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+.cp-model-btn {
+    flex: 1;
+    padding: 7px 0;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid transparent;
+    border-radius: 8px;
+    color: rgba(230, 237, 243, 0.5);
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    font-family: 'Cairo', 'Tajawal', sans-serif;
+    text-align: center;
+    transition: all 0.2s;
+}
+
+.cp-model-btn:hover {
+    background: rgba(255, 255, 255, 0.09);
+    color: rgba(230, 237, 243, 0.8);
+}
+
+.cp-model-btn.active {
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    color: #fff;
+    border-color: transparent;
+}
+
+/* حالات التحميل والخطأ */
+.cp-loading {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    padding: 30px 20px;
+    font-size: 13px;
+    opacity: 0.7;
+}
+
+.cp-spinner {
+    width: 32px;
+    height: 32px;
+    border: 3px solid rgba(255, 255, 255, 0.15);
+    border-top-color: #667eea;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+.cp-empty {
+    padding: 24px 16px;
+    text-align: center;
+    font-size: 13px;
+    opacity: 0.6;
+    line-height: 1.8;
+}
+
+/* درجة الحرارة فوق المدن */
+.temp-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(255, 160, 50, 0.90);
+    color: #1a1a1a;
+    font-size: 10px;
+    font-weight: 800;
+    padding: 1px 5px;
+    border-radius: 8px;
+    margin-right: 5px;
+    vertical-align: middle;
+    line-height: 1;
+    white-space: nowrap;
+    font-family: 'Cairo', 'Tajawal', monospace;
+}
+
+.city-label-name {
+    vertical-align: middle;
+}
+

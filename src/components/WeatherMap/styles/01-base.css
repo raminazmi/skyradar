@@ -1,0 +1,61 @@
+/* ========== Base variables ========== */
+:root {
+    --primary: #667eea;
+    --primary-grad: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    --bg-dark: #0d1117;
+    --bg-panel-dark: rgba(22, 27, 34, 0.95);
+    --border-dark: rgba(48, 54, 61, 0.5);
+    --text-dark: #e6edf3;
+    --bg-light: #f5f7fa;
+    --bg-panel-light: rgba(255, 255, 255, 0.95);
+    --border-light: rgba(0, 0, 0, 0.08);
+    --text-light: #1a1a2e;
+    --header-height: 48px;
+}
+
+* {
+    box-sizing: border-box;
+    -webkit-font-smoothing: antialiased;
+}
+
+html,
+body {
+    height: 100%;
+    width: 100%;
+    margin: 0;
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    overflow: hidden;
+}
+
+#app {
+    height: 100%;
+    width: 100%;
+    overflow: hidden;
+}
+
+/* ========== Container ========== */
+.weather-map-container {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    height: 100dvh;
+    width: 100vw;
+    overflow: hidden;
+}
+
+.weather-map-container.dark {
+    background: var(--bg-dark);
+    color: var(--text-dark);
+    --bg-panel: var(--bg-panel-dark);
+    --border-color: var(--border-dark);
+    --hover-bg: rgba(255, 255, 255, 0.06);
+}
+
+.weather-map-container.light {
+    background: var(--bg-light);
+    color: var(--text-light);
+    --bg-panel: var(--bg-panel-light);
+    --border-color: var(--border-light);
+    --hover-bg: rgba(0, 0, 0, 0.04);
+}
+

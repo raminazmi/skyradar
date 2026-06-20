@@ -1,0 +1,108 @@
+/* ========== Modal Footer ========== */
+.modal-footer {
+    padding-top: 16px;
+    border-top: 1px solid var(--border-color);
+    text-align: center;
+}
+
+.update-time {
+    margin: 0;
+    font-size: 12px;
+    color: rgba(230, 237, 243, 0.6);
+}
+
+/* ========== Loading State ========== */
+.modal-loading {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 60px 20px;
+    gap: 16px;
+    text-align: center;
+}
+
+.spinner {
+    width: 40px;
+    height: 40px;
+    border: 3px solid rgba(102, 126, 234, 0.2);
+    border-top-color: var(--primary);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+.modal-loading p {
+    margin: 0;
+    color: var(--text-dark);
+    font-size: 14px;
+}
+
+/* ========== Error State ========== */
+.modal-error {
+    padding: 40px 20px;
+    text-align: center;
+}
+
+.modal-error p {
+    margin: 0;
+    color: #ff6b6b;
+    font-size: 14px;
+}
+
+/* ========== Responsive ========== */
+@media (max-width: 768px) {
+    .weather-modal-content {
+        max-width: 95%;
+        width: 95%;
+    }
+
+    .weather-modal-header {
+        padding: 16px;
+    }
+
+    .weather-modal-body {
+        padding: 16px;
+    }
+
+    .weather-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .temperature-display {
+        flex-direction: column;
+        text-align: center;
+    }
+
+    .temp-value {
+        flex-direction: column;
+        gap: 8px;
+    }
+}
+
+/* ========== Dark Mode (already defined in root variables) ========== */
+.weather-map-container.dark .weather-modal-overlay {
+    background: rgba(0, 0, 0, 0.8);
+}
+
+.weather-map-container.light .weather-modal-content {
+    background: var(--bg-panel-light);
+    color: var(--text-light);
+}
+
+.weather-map-container.light .weather-modal-header {
+    border-bottom-color: var(--border-light);
+}
+
+.weather-map-container.light .weather-modal-title h2 {
+    color: var(--text-light);
+}
+
+.weather-map-container.light .weather-modal-title .country-name {
+    color: rgba(26, 26, 46, 0.6);
+}
