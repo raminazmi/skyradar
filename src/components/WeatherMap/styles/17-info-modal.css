@@ -92,3 +92,97 @@
     font-weight: 700;
 }
 
+/* ========== مودال المشاركة (social share) ========== */
+.share-modal {
+    width: 100%;
+    max-width: 420px;
+    background: var(--bg-panel);
+    border: 1px solid var(--border-color);
+    border-radius: 16px;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    animation: fadeInUp 0.3s ease;
+}
+
+.share-targets {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 10px;
+    padding: 20px 22px 8px;
+}
+
+.share-target {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 7px;
+    text-decoration: none;
+    color: inherit;
+    cursor: pointer;
+}
+
+.share-target-icon {
+    width: 48px;
+    height: 48px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    color: #fff;
+    font-size: 20px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+    transition: transform 0.15s ease;
+}
+
+.share-target:hover .share-target-icon {
+    transform: translateY(-3px) scale(1.06);
+}
+
+.share-target-label {
+    font-size: 11px;
+    font-weight: 600;
+    opacity: 0.85;
+}
+
+.share-link-row {
+    display: flex;
+    gap: 8px;
+    padding: 12px 22px 22px;
+}
+
+.share-link-input {
+    flex: 1;
+    min-width: 0;
+    padding: 9px 12px;
+    border-radius: 10px;
+    border: 1px solid var(--border-color);
+    background: var(--hover-bg);
+    color: inherit;
+    font-size: 12px;
+    direction: ltr;
+    text-align: left;
+    outline: none;
+}
+
+.share-copy-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 9px 14px;
+    border-radius: 10px;
+    border: none;
+    background: var(--primary, #667eea);
+    color: #fff;
+    font-family: inherit;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background 0.15s ease;
+}
+
+.share-copy-btn.copied {
+    background: #1faa59;
+}
+

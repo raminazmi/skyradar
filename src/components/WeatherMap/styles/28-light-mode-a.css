@@ -175,6 +175,10 @@
     color: var(--text-secondary);
 }
 
+.weather-map-container.light .legend-title {
+    color: var(--text-primary);
+}
+
 .weather-map-container.light .legend-model-info {
     border-top-color: var(--divider);
     color: var(--text-secondary);
@@ -199,4 +203,24 @@
 
 .weather-map-container.light .layer-controls-header {
     border-bottom-color: var(--divider);
+}
+
+/* مفاتيح التبديل داخل اللوحة: ألوانها الأساسية بيضاء (تختفي على الخلفية الفاتحة) */
+.weather-map-container.light .layer-toggle {
+    background: rgba(0, 0, 0, 0.18);
+}
+
+/* الحالة النشطة: يجب أن تبقى بنفسجية في الوضع الفاتح أيضاً — أولوية أعلى من
+   قاعدة المسار المُطفأ أعلاه حتى لا يبدو الزر النشط مُطفأً. */
+.weather-map-container.light .layer-toggle.on {
+    background: #667eea;
+}
+
+.weather-map-container.light .toggle-slider {
+    background: #ffffff;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.28);
+}
+
+.weather-map-container.light .layer-emoji {
+    background: rgba(0, 0, 0, 0.05);
 }

@@ -38,14 +38,15 @@ export function useMapStyling({ mapRef, darkMode, setMapBounds, setZoomLevel }: 
         if (!gl.isStyleLoaded()) return; // الستايل لم يجهز فعلياً بعد — يُعاد المحاولة عبر آلية المراقبة أدناه
         initedRef.current = true;
 
-        try {
-            styleWeatherBase(gl, darkMode);
-            liftAdminBordersAboveBase(gl);
-            addHillshadeTerrain(gl, darkMode);
-            hideBaseMapLabels(gl);
-            styleAdminBorders(gl, darkMode);
-            addContinentCoastline(gl, darkMode);
-        } catch { /* تجاهل */ }
+        // كل خطوة في حارس مستقل: فشل واحدة (مثلاً التضاريس) يجب ألّا يُلغي البقية —
+        // وإلّا تبقى الأسماء الإنجليزية ظاهرة وتختفي السواحل/التفاصيل.
+        const step = (fn: () => void) => { try { fn(); } catch { /* تجاهل */ } };
+        step(() => styleWeatherBase(gl, darkMode));
+        step(() => liftAdminBordersAboveBase(gl));
+        step(() => addHillshadeTerrain(gl, darkMode));
+        step(() => hideBaseMapLabels(gl));
+        step(() => styleAdminBorders(gl, darkMode));
+        step(() => addContinentCoastline(gl, darkMode));
 
         applyMinZoom(gl);
         const b = map.getBounds();
@@ -84,6 +85,7 @@ export function useMapStyling({ mapRef, darkMode, setMapBounds, setZoomLevel }: 
         try {
             const gl = map.getMap();
             styleWeatherBase(gl, darkMode);
+            hideBaseMapLabels(gl);          // إبقاء الأسماء الإنجليزية مخفيّة بعد تبديل الثيم
             styleAdminBorders(gl, darkMode);
             addContinentCoastline(gl, darkMode);
             applyHillshadeTheme(gl, darkMode);

@@ -7,13 +7,33 @@ import { useEffect, useRef } from 'react';
 import { useMapRef } from './MapContext';
 import { useWeatherStore } from '../../store/weatherStore';
 import { weatherGridService, WeatherGrid } from '../../services/weatherGridService';
+import { getHeatmapColor } from '../../services/colorScales';
 
-type LabelKind = 'country' | 'capital' | 'city' | 'sea';
+/** يختار لون نصّ مقروء (أبيض/أسود) حسب إضاءة لون الخلفية rgba. */
+function pickTextColor(rgba: string): string {
+    const m = rgba.match(/rgba?\(([^)]+)\)/);
+    if (!m) return '#1a1100';
+    const [r, g, b] = m[1].split(',').map((s) => parseFloat(s.trim()));
+    const lum = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+    return lum > 0.62 ? '#1a1100' : '#ffffff';
+}
+
+type LabelKind = 'continent' | 'country' | 'capital' | 'city' | 'sea';
 interface MapLabel { lat: number; lon: number; name: string; minZoom: number; maxZoom?: number; kind: LabelKind; priority: number; }
 
+// أسماء القارات — تظهر عند التصغير الكامل (قبل أن تظهر الدول) وتختفي عند التقريب.
+const continents: MapLabel[] = [
+    { lat: 45.0, lon: 90.0, name: 'آسيا', minZoom: 0, maxZoom: 3.2, kind: 'continent', priority: 200 },
+    { lat: 2.0, lon: 22.0, name: 'أفريقيا', minZoom: 0, maxZoom: 3.4, kind: 'continent', priority: 200 },
+    { lat: 50.0, lon: 12.0, name: 'أوروبا', minZoom: 0, maxZoom: 3.2, kind: 'continent', priority: 200 },
+    { lat: 43.0, lon: -100.0, name: 'أمريكا الشمالية', minZoom: 0, maxZoom: 3.2, kind: 'continent', priority: 200 },
+    { lat: -12.0, lon: -58.0, name: 'أمريكا الجنوبية', minZoom: 0, maxZoom: 3.4, kind: 'continent', priority: 200 },
+    { lat: -25.0, lon: 134.0, name: 'أستراليا', minZoom: 0, maxZoom: 3.4, kind: 'continent', priority: 200 },
+];
+
 const countries: MapLabel[] = [
-    { lat: 23.9, lon: 45.1, name: 'السعودية', minZoom: 2, maxZoom: 7, kind: 'country', priority: 100 },
-    { lat: 26.8, lon: 30.8, name: 'مصر', minZoom: 2, maxZoom: 7, kind: 'country', priority: 100 },
+    { lat: 23.9, lon: 45.1, name: 'السعودية', minZoom: 1, maxZoom: 7, kind: 'country', priority: 100 },
+    { lat: 26.8, lon: 30.8, name: 'مصر', minZoom: 1, maxZoom: 7, kind: 'country', priority: 100 },
     { lat: 33.1, lon: 43.6, name: 'العراق', minZoom: 2, maxZoom: 7, kind: 'country', priority: 95 },
     { lat: 28.0, lon: 2.6, name: 'الجزائر', minZoom: 2, maxZoom: 7, kind: 'country', priority: 95 },
     { lat: 31.8, lon: -6.0, name: 'المغرب', minZoom: 2, maxZoom: 7, kind: 'country', priority: 90 },
@@ -27,15 +47,32 @@ const countries: MapLabel[] = [
     { lat: 34.1, lon: 9.4, name: 'تونس', minZoom: 4, maxZoom: 8, kind: 'country', priority: 75 },
     { lat: 39.0, lon: 35.2, name: 'تركيا', minZoom: 2, maxZoom: 7, kind: 'country', priority: 95 },
     { lat: 32.0, lon: 53.7, name: 'إيران', minZoom: 2, maxZoom: 7, kind: 'country', priority: 95 },
-    { lat: 22.9, lon: 79.6, name: 'الهند', minZoom: 2, maxZoom: 7, kind: 'country', priority: 100 },
-    { lat: 35.9, lon: 104.2, name: 'الصين', minZoom: 2, maxZoom: 7, kind: 'country', priority: 100 },
-    { lat: 56.0, lon: 37.6, name: 'روسيا', minZoom: 2, maxZoom: 7, kind: 'country', priority: 100 },
+    { lat: 22.9, lon: 79.6, name: 'الهند', minZoom: 1, maxZoom: 7, kind: 'country', priority: 100 },
+    { lat: 35.9, lon: 104.2, name: 'الصين', minZoom: 1, maxZoom: 7, kind: 'country', priority: 100 },
+    { lat: 56.0, lon: 37.6, name: 'روسيا', minZoom: 1, maxZoom: 7, kind: 'country', priority: 100 },
     { lat: 46.2, lon: 2.2, name: 'فرنسا', minZoom: 3, maxZoom: 8, kind: 'country', priority: 85 },
     { lat: 51.2, lon: 10.4, name: 'ألمانيا', minZoom: 3, maxZoom: 8, kind: 'country', priority: 85 },
-    { lat: 37.3, lon: -95.7, name: 'الولايات المتحدة', minZoom: 2, maxZoom: 7, kind: 'country', priority: 100 },
-    { lat: 57.0, lon: -106.0, name: 'كندا', minZoom: 2, maxZoom: 7, kind: 'country', priority: 100 },
-    { lat: -14.2, lon: -51.9, name: 'البرازيل', minZoom: 2, maxZoom: 7, kind: 'country', priority: 100 },
-    { lat: -25.3, lon: 133.8, name: 'أستراليا', minZoom: 2, maxZoom: 7, kind: 'country', priority: 95 },
+    { lat: 37.3, lon: -95.7, name: 'الولايات المتحدة', minZoom: 1, maxZoom: 7, kind: 'country', priority: 100 },
+    { lat: 57.0, lon: -106.0, name: 'كندا', minZoom: 1, maxZoom: 7, kind: 'country', priority: 100 },
+    { lat: -14.2, lon: -51.9, name: 'البرازيل', minZoom: 1, maxZoom: 7, kind: 'country', priority: 100 },
+    { lat: -25.3, lon: 133.8, name: 'أستراليا', minZoom: 4, maxZoom: 8, kind: 'country', priority: 95 },
+    { lat: 9.1, lon: 8.7, name: 'نيجيريا', minZoom: 3, maxZoom: 7, kind: 'country', priority: 80 },
+    { lat: -1.3, lon: 36.8, name: 'كينيا', minZoom: 3, maxZoom: 8, kind: 'country', priority: 75 },
+    { lat: -30.6, lon: 22.9, name: 'جنوب أفريقيا', minZoom: 2, maxZoom: 7, kind: 'country', priority: 85 },
+    { lat: 9.0, lon: 38.7, name: 'إثيوبيا', minZoom: 3, maxZoom: 8, kind: 'country', priority: 75 },
+    { lat: 40.4, lon: -3.7, name: 'إسبانيا', minZoom: 3, maxZoom: 8, kind: 'country', priority: 80 },
+    { lat: 41.9, lon: 12.6, name: 'إيطاليا', minZoom: 3, maxZoom: 8, kind: 'country', priority: 80 },
+    { lat: 30.4, lon: 69.3, name: 'باكستان', minZoom: 2, maxZoom: 7, kind: 'country', priority: 85 },
+    { lat: 36.2, lon: 138.3, name: 'اليابان', minZoom: 2, maxZoom: 7, kind: 'country', priority: 90 },
+    { lat: 36.5, lon: 127.8, name: 'كوريا الجنوبية', minZoom: 3, maxZoom: 8, kind: 'country', priority: 75 },
+    { lat: -0.8, lon: 113.9, name: 'إندونيسيا', minZoom: 2, maxZoom: 7, kind: 'country', priority: 85 },
+    { lat: 23.6, lon: -102.5, name: 'المكسيك', minZoom: 2, maxZoom: 7, kind: 'country', priority: 85 },
+    { lat: -38.4, lon: -63.6, name: 'الأرجنتين', minZoom: 2, maxZoom: 7, kind: 'country', priority: 85 },
+    { lat: 52.1, lon: 19.4, name: 'بولندا', minZoom: 4, maxZoom: 8, kind: 'country', priority: 70 },
+    { lat: 52.1, lon: -1.0, name: 'بريطانيا', minZoom: 3, maxZoom: 8, kind: 'country', priority: 85 },
+    { lat: 60.1, lon: 18.6, name: 'السويد', minZoom: 4, maxZoom: 8, kind: 'country', priority: 70 },
+    { lat: 39.3, lon: 59.6, name: 'تركمانستان', minZoom: 4, maxZoom: 8, kind: 'country', priority: 65 },
+    { lat: 48.0, lon: 66.9, name: 'كازاخستان', minZoom: 2, maxZoom: 7, kind: 'country', priority: 80 },
 ];
 
 const seas: MapLabel[] = [
@@ -73,7 +110,7 @@ const cities: MapLabel[] = [
     { lat: -33.8688, lon: 151.2093, name: 'سيدني', minZoom: 5, kind: 'city', priority: 75 },
 ];
 
-const ALL_LABELS = [...countries, ...seas, ...cities];
+const ALL_LABELS = [...continents, ...countries, ...seas, ...cities];
 
 interface ArabicCityLabelsProps { temperatureGrid?: WeatherGrid | null; }
 
@@ -104,7 +141,7 @@ export function ArabicCityLabels({ temperatureGrid = null }: ArabicCityLabelsPro
                 .filter(l => zoom >= l.minZoom && zoom <= (l.maxZoom ?? 20))
                 .sort((a, b) => b.priority - a.priority);
 
-            const maxLabels = zoom < 3 ? 18 : zoom < 5 ? 45 : 110;
+            const maxLabels = zoom < 3 ? 40 : zoom < 5 ? 60 : 110;
             const chunks: string[] = [];
             let count = 0;
 
@@ -119,10 +156,17 @@ export function ArabicCityLabels({ temperatureGrid = null }: ArabicCityLabelsPro
                     : undefined;
                 const temp = rawTemp === undefined ? undefined
                     : units.temperature === 'fahrenheit' ? Math.round((rawTemp * 9) / 5 + 32) : Math.round(rawTemp);
-                const base  = label.kind === 'country' ? 12 : label.kind === 'sea' ? 11 : label.kind === 'capital' ? 11 : 10;
+                const base  = label.kind === 'continent' ? 15 : label.kind === 'country' ? 12 : label.kind === 'sea' ? 11 : label.kind === 'capital' ? 11 : 10;
                 const boost = Math.max(0, Math.min(4, zoom - 4));
                 const dot   = label.kind === 'capital' ? '<i class="label-dot"></i>' : '';
-                const badge = temp !== undefined ? `<b class="label-temp">${temp}°</b>` : '';
+                // شارة الحرارة بخلفية ملوّنة حسب الدرجة (نفس مقياس ألوان Zoom Earth) —
+                // اللون يُحسب من القيمة الخام بالسيليزيوس حتى لو عُرضت بالفهرنهايت.
+                let badge = '';
+                if (temp !== undefined && rawTemp !== undefined) {
+                    const bg  = getHeatmapColor(rawTemp, 'temperature') ?? 'rgba(255,160,50,0.95)';
+                    const txt = pickTextColor(bg);
+                    badge = `<b class="label-temp" style="background:${bg};color:${txt}">${temp}°</b>`;
+                }
                 const clickable = label.kind !== 'sea';
 
                 chunks.push(`<div class="map-label map-label-${label.kind} ${darkMode ? 'dark' : 'light'}${clickable ? ' label-clickable' : ''}"

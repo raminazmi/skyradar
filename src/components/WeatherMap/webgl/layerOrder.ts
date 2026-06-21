@@ -47,20 +47,17 @@ export function addHillshadeTerrain(map: MaplibreMap, darkMode = false): void {
         });
     }
     if (!map.getLayer('weather-hillshade')) {
+        // ألوان مبدئية بسيطة فقط — تُستبدَل فوراً بـ applyHillshadeTheme أدناه
+        // (نفس الألوان المستخدمة عند تبديل الثيم) لتجنّب ازدواج تعريف الألوان
+        // وتفادي سباق كانت فيه الألوان الأولية شبه سوداء على أسود (تضاريس غير مرئية).
         map.addLayer({
             id: 'weather-hillshade',
             type: 'hillshade',
             source: 'weather-dem',
-            paint: {
-                'hillshade-exaggeration': darkMode ? 0.95 : 0.90,
-                'hillshade-shadow-color':    darkMode ? 'rgba(0,0,0,0.95)'       : 'rgba(60,40,10,0.85)',
-                'hillshade-highlight-color': darkMode ? 'rgba(16, 16, 16, 0.89)' : 'rgba(255,248,220,0.80)',
-                'hillshade-accent-color':    darkMode ? 'rgba(29, 29, 31, 0.83)'    : 'rgba(180,130,60,0.40)',
-            },
+            paint: {},
         }, getWeatherInsertBeforeId(map));
-    } else {
-        applyHillshadeTheme(map, darkMode);
     }
+    applyHillshadeTheme(map, darkMode);
 }
 
 /** يُحدّث ألوان التضاريس عند تغيير الثيم دون الحاجة لإعادة إنشاء الطبقة. */
@@ -92,20 +89,27 @@ export function styleWeatherBase(map: MaplibreMap, darkMode: boolean): void {
         if (!map.getLayer(id)) return;
         try { map.setPaintProperty(id, prop, val as never); } catch { /* تجاهل */ }
     };
-    const land  = darkMode ? '#20242a' : '#e4e8d4'; // فستقي فاتح في الوضع النهاري
-    const water = darkMode ? '#161b22' : '#bcd6e8';
-    const bg    = darkMode ? '#0e1116' : '#dfe4d0';
+    // الوضع الفاتح: قاعدة بيضاء (بدل الفستقي/الرمادي الذي كان يكسو ألوان الطقس بميلٍ رمادي)
+    // فتظهر ألوان الطقس نقيّة وزاهية كما في Zoom Earth. الماء بأزرق فاتح جداً لتمييز البحر فقط.
+    const land  = darkMode ? '#20242a' : '#ffffff';
+    const water = darkMode ? '#161b22' : '#dbe9f6';
+    const bg    = darkMode ? '#0e1116' : '#ffffff';
 
     set('background', 'background-color', bg);
+    // ملاحظة مهمة (مطابقة Zoom Earth): طبقة الطقس مُدرَجة أسفل مضلّعات اليابسة/الماء.
+    // لو بقيت هذه المضلّعات معتمة (ولو جزئياً) فإنها تكتم لون الطقس من تحتها — وأوضحها
+    // مضلّع الماء فوق المحيطات، فيظهر البحر "شبه فارغ" بينما تظهر اليابسة ملوّنة.
+    // الحلّ: نجعلها شفّافة تماماً فيغطّي حقل الطقس البرّ والبحر بالتساوي، ويبقى خطّ
+    // الساحل (continent-coastline) والحدود والتسميات فوقه كخطوط واضحة.
     for (const l of ['landcover', 'landuse', 'landuse_residential', 'landcover_wood',
                      'landcover_grass', 'park', 'park_national_park', 'park_nature_reserve',
                      'national_park', 'wood', 'grass', 'globallandcover']) {
         set(l, 'fill-color', land);
-        set(l, 'fill-opacity', 0.35);
+        set(l, 'fill-opacity', 0.35); // تفاصيل اليابسة (غطاء أرضي/حدائق) تبقى ظاهرة تحت الطقس
     }
     for (const l of ['water', 'water_shadow', 'ocean']) {
         set(l, 'fill-color', water);
-        set(l, 'fill-opacity', 0.45);
+        set(l, 'fill-opacity', 0.30); // لمسة خفيفة تميّز البحر بصرياً دون كتم لون الطقس
     }
     for (const l of ['building', 'building-top']) {
         set(l, 'fill-opacity', 0.5);

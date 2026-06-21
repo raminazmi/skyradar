@@ -52,22 +52,30 @@ export function useForecastGrids({ mapBounds, selectedModel, currentTimeIndex, i
         );
         if (cached) setWindGrid(cached);
 
-        if (isPlaying) return () => { cancelled = true; };
-
         const timer = window.setTimeout(async () => {
             try {
+                // إطار سريع (دقّة منخفضة) يُعرض فوراً — يضمن تحديث حقل الرياح/الجسيمات مع كل تغيّر وقت
                 const fast = await weatherGridService.generateGrid('wind', bounds, selectedModel, currentTimeIndex, 6);
                 if (cancelled || windRequestRef.current !== id) return;
                 if (weatherGridService.isLiveProviderGrid(fast)) setWindGrid(fast);
 
-                const qual = await weatherGridService.generateGrid('wind', bounds, selectedModel, currentTimeIndex, qRes);
-                if (!cancelled && windRequestRef.current === id && weatherGridService.isLiveProviderGrid(qual)) {
-                    setWindGrid(qual);
-                    weatherGridService.prefetchGrid('wind', bounds, selectedModel, currentTimeIndex + 1, 6);
-                    weatherGridService.prefetchGrid('wind', bounds, selectedModel, currentTimeIndex - 1, 6);
+                // عند التوقّف فقط نرفع الجودة (أثناء التشغيل نكتفي بالسريع للسلاسة)
+                if (!isPlaying) {
+                    const qual = await weatherGridService.generateGrid('wind', bounds, selectedModel, currentTimeIndex, qRes);
+                    if (!cancelled && windRequestRef.current === id && weatherGridService.isLiveProviderGrid(qual)) {
+                        setWindGrid(qual);
+                    }
                 }
+
+                // تحميل مُسبق لنافذة من الإطارات القادمة ليبقى التشغيل سلساً (أسلوب Zoom Earth)
+                // عازل: نحمّل عدّة إطارات قادمة مسبقاً حتى قبل التشغيل (idle) فيبدأ التشغيل سلساً
+                const ahead = isPlaying ? 6 : 4;
+                for (let i = 1; i <= ahead; i++) {
+                    weatherGridService.prefetchGrid('wind', bounds, selectedModel, currentTimeIndex + i, 6);
+                }
+                if (!isPlaying) weatherGridService.prefetchGrid('wind', bounds, selectedModel, currentTimeIndex - 1, 6);
             } catch (e) { console.error('خطأ في شبكة الرياح:', e); }
-        }, 200);
+        }, isPlaying ? 0 : 200);
 
         return () => { cancelled = true; window.clearTimeout(timer); };
     }, [activeForecastLayer, mapBounds, selectedModel, currentTimeIndex, isPlaying]);
@@ -97,22 +105,28 @@ export function useForecastGrids({ mapBounds, selectedModel, currentTimeIndex, i
             return previous?.type === active ? previous : null;
         });
 
-        if (isPlaying) return () => { cancelled = true; };
-
         const timer = window.setTimeout(async () => {
             try {
+                // إطار سريع يُعرض فوراً — يضمن تحديث الطبقة الحرارية مع كل تغيّر وقت أثناء التشغيل
                 const fast = await weatherGridService.generateGrid(active, bounds, selectedModel, currentTimeIndex, 6);
                 if (cancelled || heatmapRequestRef.current !== id) return;
                 if (weatherGridService.isLiveProviderGrid(fast)) setHeatmapGrid(fast);
 
-                const qual = await weatherGridService.generateGrid(active, bounds, selectedModel, currentTimeIndex, qRes);
-                if (!cancelled && heatmapRequestRef.current === id && weatherGridService.isLiveProviderGrid(qual)) {
-                    setHeatmapGrid(qual);
-                    weatherGridService.prefetchGrid(active, bounds, selectedModel, currentTimeIndex + 1, 6);
-                    weatherGridService.prefetchGrid(active, bounds, selectedModel, currentTimeIndex - 1, 6);
+                if (!isPlaying) {
+                    const qual = await weatherGridService.generateGrid(active, bounds, selectedModel, currentTimeIndex, qRes);
+                    if (!cancelled && heatmapRequestRef.current === id && weatherGridService.isLiveProviderGrid(qual)) {
+                        setHeatmapGrid(qual);
+                    }
                 }
+
+                // عازل: نحمّل عدّة إطارات قادمة مسبقاً حتى قبل التشغيل (idle) فيبدأ التشغيل سلساً
+                const ahead = isPlaying ? 6 : 4;
+                for (let i = 1; i <= ahead; i++) {
+                    weatherGridService.prefetchGrid(active, bounds, selectedModel, currentTimeIndex + i, 6);
+                }
+                if (!isPlaying) weatherGridService.prefetchGrid(active, bounds, selectedModel, currentTimeIndex - 1, 6);
             } catch (e) { console.error('خطأ في شبكة الخريطة الحرارية:', e); }
-        }, 200);
+        }, isPlaying ? 0 : 200);
 
         return () => { cancelled = true; window.clearTimeout(timer); };
         // eslint-disable-next-line react-hooks/exhaustive-deps

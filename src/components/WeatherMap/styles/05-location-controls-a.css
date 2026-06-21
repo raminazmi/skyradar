@@ -1,8 +1,8 @@
 /* ========== Location indicator ========== */
 .location-indicator {
     position: absolute;
-    top: 16px;
-    left: 16px;
+    top: 15px;
+    left: 18px; /* يمين زر الطبقات (16 + 42 عرض + هامش) فلا يتراكبان */
     background: var(--bg-panel);
     backdrop-filter: blur(16px);
     border: 1px solid var(--border-color);

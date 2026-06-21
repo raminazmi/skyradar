@@ -20,9 +20,10 @@ interface ParticleWebGLLayerProps {
     id: string;
     windGrid: WeatherGrid | null;
     settings: LayerAnimationSettings;
+    darkMode?: boolean;
 }
 
-export function ParticleWebGLLayer({ id, windGrid, settings }: ParticleWebGLLayerProps) {
+export function ParticleWebGLLayer({ id, windGrid, settings, darkMode = true }: ParticleWebGLLayerProps) {
     const mapRef   = useMapRef();
     const layerRef = useRef<ParticleGLLayer | null>(null);
 
@@ -33,7 +34,7 @@ export function ParticleWebGLLayer({ id, windGrid, settings }: ParticleWebGLLaye
 
         let cancelled = false;
         // الكثافة تُحسب تلقائياً من الزووم داخل ParticleGLLayer في كل إطار
-        const layer = new ParticleGLLayer(id, BASE_PARTICLE_SETTINGS);
+        const layer = new ParticleGLLayer(id, BASE_PARTICLE_SETTINGS, darkMode);
 
         const add = () => {
             if (cancelled) return;
@@ -63,6 +64,7 @@ export function ParticleWebGLLayer({ id, windGrid, settings }: ParticleWebGLLaye
 
     useEffect(() => { layerRef.current?.setWindGrid(windGrid); }, [windGrid]);
     useEffect(() => { layerRef.current?.setSettings(BASE_PARTICLE_SETTINGS); }, [settings]);
+    useEffect(() => { layerRef.current?.setDarkMode(darkMode); }, [darkMode]);
 
     return null;
 }

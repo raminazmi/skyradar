@@ -61,9 +61,11 @@ export class ParticleGLLayer implements CustomLayerInterface {
     private moving = false;
 
     private settings: ParticleSettings = { speed: 1, trail: 0.95, opacity: 0.85, density: 0.95 };
+    private darkMode = true;
 
-    constructor(id: string, settings?: Partial<ParticleSettings>) {
+    constructor(id: string, settings?: Partial<ParticleSettings>, darkMode = true) {
         this.id = id;
+        this.darkMode = darkMode;
         if (settings) this.settings = { ...this.settings, ...settings };
     }
 
@@ -71,6 +73,11 @@ export class ParticleGLLayer implements CustomLayerInterface {
     setWindGrid(grid: WeatherGrid | null) {
         this.grid = grid;
         this.gridDirty = true;
+        this.map?.triggerRepaint();
+    }
+
+    setDarkMode(darkMode: boolean) {
+        this.darkMode = darkMode;
         this.map?.triggerRepaint();
     }
 
@@ -88,7 +95,7 @@ export class ParticleGLLayer implements CustomLayerInterface {
         this.updateProgram = createProgram(gl, QUAD_VERT, UPDATE_FRAG);
         this.screenProgram = createProgram(gl, QUAD_VERT, SCREEN_FRAG);
         this.drawLoc = getLocations(gl, this.drawProgram, ['a_index'],
-            ['u_particles', 'u_wind', 'u_particles_res', 'u_matrix', 'u_bounds', 'u_point_size', 'u_alpha']);
+            ['u_particles', 'u_wind', 'u_particles_res', 'u_matrix', 'u_bounds', 'u_point_size', 'u_alpha', 'u_color']);
         this.updateLoc = getLocations(gl, this.updateProgram, ['a_pos'],
             ['u_particles', 'u_wind', 'u_rand_seed', 'u_speed', 'u_drop_rate', 'u_drop_rate_bump']);
         this.screenLoc = getLocations(gl, this.screenProgram, ['a_pos'], ['u_screen', 'u_opacity']);
@@ -267,8 +274,12 @@ export class ParticleGLLayer implements CustomLayerInterface {
         // MapLibre v5: نستخدم mainMatrix لإحداثيات MercatorCoordinate [0..1] (وليس modelViewProjectionMatrix).
         gl.uniformMatrix4fv(this.drawLoc.uniforms.u_matrix, false, new Float32Array(options.defaultProjectionData.mainMatrix as ArrayLike<number>));
         gl.uniform4f(this.drawLoc.uniforms.u_bounds, b.west, b.south, b.east, b.north);
-        gl.uniform1f(this.drawLoc.uniforms.u_point_size, 2.1);
+        // حجم أكبر قليلاً (كان 2.1) لتبدو الجسيمات أوضح وأجمل دون مبالغة
+        gl.uniform1f(this.drawLoc.uniforms.u_point_size, 3.2);
         gl.uniform1f(this.drawLoc.uniforms.u_alpha, this.settings.opacity);
+        // أبيض في الوضع الداكن، أزرق داكن مائل للرمادي في الفاتح (يظهر بوضوح فوق خريطة فاتحة)
+        if (this.darkMode) gl.uniform3f(this.drawLoc.uniforms.u_color, 1.0, 1.0, 1.0);
+        else gl.uniform3f(this.drawLoc.uniforms.u_color, 0.13, 0.18, 0.28);
 
         gl.drawArrays(gl.POINTS, 0, this.numDrawn);
     }

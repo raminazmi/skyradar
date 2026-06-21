@@ -76,7 +76,7 @@ export function CentralLegend() {
     return (
         <div className="central-legend">
             <div className="legend-content">
-                <div className="legend-title">{legend.title}</div>
+                <div className="legend-title" >{legend.title}</div>
                 <div className="legend-bar" style={{ background: legend.gradient }} />
                 <div className="legend-labels">
                     {legend.labels.map((label) => <span key={label} className="legend-label">{label}</span>)}

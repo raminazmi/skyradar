@@ -6,7 +6,7 @@
  * الخريطة: CartoDB Dark Matter (تصميم داكن مجاني مبني على OSM)
  */
 
-import { useEffect, useRef } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 import Map, { Marker, type MapRef, type MapLayerMouseEvent } from 'react-map-gl/maplibre';
 import 'maplibre-gl/dist/maplibre-gl.css';
 
@@ -16,6 +16,7 @@ import { WeatherInfoPanel } from './WeatherInfoPanel';
 import { LayerControls }    from './LayerControls';
 import { SettingsPanel }    from './SettingsPanel';
 import { HeatmapWebGLLayer }   from './HeatmapWebGLLayer';
+import { HoverValueTooltip }    from './HoverValueTooltip';
 import { ParticleWebGLLayer }  from './ParticleWebGLLayer';
 import { ArabicCityLabels }    from './ArabicCityLabels';
 import { RightToolbar }        from './RightToolbar';
@@ -29,8 +30,11 @@ import { MapContext }           from './MapContext';
 import { useWeatherStore }    from '../../store/weatherStore';
 import { useWeatherData }     from './hooks/useWeatherData';
 import { useForecastGrids }   from './hooks/useForecastGrids';
+import { weatherGridService } from '../../services/weatherGridService';
+import { getStableGridBounds } from './utils/gridBounds';
 import { useAutoplay }        from './hooks/useAutoplay';
 import { useMapStyling }      from './hooks/useMapStyling';
+import { useHoverTemperatureGrid } from './hooks/useHoverTemperatureGrid';
 import { FiMapPin }           from 'react-icons/fi';
 
 import './WeatherMap.css';
@@ -60,10 +64,24 @@ export function NewWeatherMap() {
 
     // ── خطافات الجلب والتنسيق (مُستخرَجة لإبقاء الملف < 300 سطر) ──────────────
     useWeatherData({ currentLocation, selectedModel });
-    useAutoplay({ isPlaying, playbackSpeed, weatherData });
     const { windGrid, heatmapGrid, activeHeatmapType } = useForecastGrids({
         mapBounds, selectedModel, currentTimeIndex, isPlaying, visibleLayers,
     });
+
+    // جهوزية إطار التشغيل: نتقدّم فقط عندما تكون شبكة الطبقة الفعّالة لذلك الإطار
+    // مخزّنة (وإلا نحفّز تحميلها مسبقاً وننتظر) — فلا يظهر إطار مجمّد أثناء التشغيل.
+    const playbackCanAdvance = useCallback((idx: number) => {
+        if (!mapBounds) return true;
+        const type = activeHeatmapType ?? (visibleLayers.wind ? 'wind' : null);
+        if (!type) return true;
+        const bounds = getStableGridBounds(mapBounds);
+        if (weatherGridService.getCachedGrid(type, bounds, selectedModel, idx, 6)) return true;
+        weatherGridService.prefetchGrid(type, bounds, selectedModel, idx, 6);
+        return false;
+    }, [mapBounds, activeHeatmapType, visibleLayers.wind, selectedModel]);
+
+    useAutoplay({ isPlaying, playbackSpeed, weatherData, canAdvance: playbackCanAdvance });
+
     const { handleMapLoad, handleMoveEnd } = useMapStyling({
         mapRef, darkMode, setMapBounds, setZoomLevel,
     });
@@ -72,6 +90,15 @@ export function NewWeatherMap() {
         setCurrentLocation(e.lngLat.lat, e.lngLat.lng);
         setInfoPanelOpen(true);
     };
+
+    // شبكة حرارة دائمة لتلميح المرور — تظهر درجة الحرارة عند المؤشّر حتى لو لم تكن
+    // أي طبقة معروضة (سلوك Zoom Earth).
+    const hoverTempGrid = useHoverTemperatureGrid({ mapBounds, selectedModel, currentTimeIndex });
+
+    // التلميح عند المرور (hover): نُفضّل الطبقة العددية المعروضة (حرارة/ضغط...) إن وُجدت،
+    // وإلا نعود دائماً إلى درجة الحرارة. هكذا يظهر التلميح في كل الأحوال.
+    const hoverGrid = (activeHeatmapType && heatmapGrid) ? heatmapGrid : hoverTempGrid;
+    const hoverType = hoverGrid?.type ?? null;
 
     const overlayPanelOpen = infoPanelOpen || layerControlsOpen || sidebarOpen || settingsOpen;
     const initialLng = currentLocation?.lon ?? 46.7;
@@ -87,13 +114,13 @@ export function NewWeatherMap() {
 
                 {/* شعار عائم فوق الخريطة — بدون هيدر */}
                 <div
-                    className="fixed top-[14px] left-4 right-auto z-[950] flex items-center gap-[7px] py-[7px] pr-[13px] pl-[11px] [direction:ltr] bg-[rgba(22,27,34,0.88)] backdrop-blur-[18px] border border-white/10 rounded-full shadow-[0_2px_16px_rgba(0,0,0,0.25)] pointer-events-none select-none whitespace-nowrap max-md:hidden [.weather-map-container.light_&]:bg-white/90 [.weather-map-container.light_&]:border-black/[0.09]"
+                    className={` ${darkMode ? 'bg-[#0d1117]' : 'bg-white' } fixed top-[14px] right-16 left-auto z-[950] py-2 px-3 flex items-center [direction:ltr]  rounded-xl shadow-[0_2px_16px_rgba(0,0,0,0.25)] pointer-events-none select-none whitespace-nowrap max-md:hidden`}
                     aria-label="Sky Radar"
                 >
                     <img
                         src={darkMode ? '/sky-radar-logo-dark.svg' : '/sky-radar-logo-light.svg'}
                         alt="Sky Radar"
-                        className="h-[22px] w-auto shrink-0"
+                        className="h-[35px] w-auto shrink-0 block"
                     />
                 </div>
 
@@ -137,11 +164,11 @@ export function NewWeatherMap() {
                             const key = visibleLayers.wind ? 'wind' : activeHeatmapType;
                             const s = key ? layerAnimationSettings[key] : null;
                             if (!windGrid || !s || !s.particlesEnabled || s.reduceMotion) return null;
-                            return <ParticleWebGLLayer id="weather-particles" windGrid={windGrid} settings={s} />;
+                            return <ParticleWebGLLayer id="weather-particles" windGrid={windGrid} settings={s} darkMode={darkMode} />;
                         })()}
 
-                        {/* تسميات المدن والدول */}
-                        <ArabicCityLabels />
+                        {/* تسميات المدن والدول (مع حرارة كل مدينة الثابتة) */}
+                        <ArabicCityLabels temperatureGrid={hoverTempGrid} />
 
                         {/* متتبع الأعاصير والحرائق */}
                         <CycloneTracker />
@@ -161,6 +188,9 @@ export function NewWeatherMap() {
                             </Marker>
                         )}
                     </Map>
+
+                    {/* تلميح القيمة عند مرور المؤشّر (أسلوب Zoom Earth) */}
+                    <HoverValueTooltip grid={hoverGrid} type={hoverType} windGrid={windGrid} />
 
                     {/* لوحة التحكم بالطبقات */}
                     <LayerControls />

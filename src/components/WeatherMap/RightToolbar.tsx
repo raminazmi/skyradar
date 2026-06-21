@@ -6,8 +6,11 @@
 import { useState, useEffect } from 'react';
 import {
     FiSearch, FiInfo, FiShare2, FiCrosshair,
-    FiPlus, FiMinus, FiMaximize2, FiMinimize2, FiLoader, FiSettings, FiMenu, FiSun, FiSunset
+    FiPlus, FiMinus, FiMaximize2, FiMinimize2, FiLoader, FiSettings, FiMenu, FiSun, FiSunset,
+    FiCopy, FiCheck, FiMail
 } from 'react-icons/fi';
+import { FaWhatsapp, FaFacebookF, FaTelegramPlane } from 'react-icons/fa';
+import { FaXTwitter } from 'react-icons/fa6';
 import { useWeatherStore } from '../../store/weatherStore';
 import { useMapRef } from './MapContext';
 import { geocodingService, GeocodingResult } from '../../services/geocodingService';
@@ -41,6 +44,8 @@ export function RightToolbar() {
     const [isFullscreen, setIsFullscreen]   = useState(false);
     const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
     const [searchLoading, setSearchLoading] = useState(false);
+    const [shareUrl, setShareUrl]           = useState('');
+    const [copied, setCopied]               = useState(false);
 
     const closeFloatingPanels = () => {
         if (!isCompactViewport()) return;
@@ -114,11 +119,38 @@ export function RightToolbar() {
     const handleShare = () => {
         const center = mapRef.current?.getCenter();
         const zoom   = mapRef.current?.getZoom() ?? 4;
-        if (!center) return;
-        const url = `${window.location.origin}?lat=${center.lat.toFixed(4)}&lon=${center.lng.toFixed(4)}&z=${zoom}`;
-        navigator.clipboard.writeText(url);
-        alert('تم نسخ الرابط بنجاح');
+        const url = center
+            ? `${window.location.origin}?lat=${center.lat.toFixed(4)}&lon=${center.lng.toFixed(4)}&z=${zoom.toFixed(1)}`
+            : window.location.href;
+        setShareUrl(url);
+        setCopied(false);
+        setShowShare(true);
+        setShowSearch(false);
+        setShowInfo(false);
+        closeFloatingPanels();
     };
+
+    const handleCopyLink = async () => {
+        try {
+            await navigator.clipboard.writeText(shareUrl);
+            setCopied(true);
+            setTimeout(() => setCopied(false), 2000);
+        } catch { /* المتصفح منع الوصول للحافظة */ }
+    };
+
+    const shareText = 'تابع حالة الطقس على Sky Radar';
+    const shareTargets = [
+        { key: 'whatsapp', label: 'واتساب',  Icon: FaWhatsapp,      color: '#25D366',
+          href: `https://wa.me/?text=${encodeURIComponent(`${shareText} ${shareUrl}`)}` },
+        { key: 'x',        label: 'X',        Icon: FaXTwitter,      color: '#000000',
+          href: `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(shareUrl)}` },
+        { key: 'telegram', label: 'تيليجرام', Icon: FaTelegramPlane, color: '#229ED9',
+          href: `https://t.me/share/url?url=${encodeURIComponent(shareUrl)}&text=${encodeURIComponent(shareText)}` },
+        { key: 'facebook', label: 'فيسبوك',   Icon: FaFacebookF,     color: '#1877F2',
+          href: `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}` },
+        { key: 'email',    label: 'البريد',   Icon: FiMail,          color: '#6b7280',
+          href: `mailto:?subject=${encodeURIComponent(shareText)}&body=${encodeURIComponent(`${shareText}\n${shareUrl}`)}` },
+    ];
 
     const handleFullscreen = () => {
         if (!document.fullscreenElement) {
@@ -133,7 +165,6 @@ export function RightToolbar() {
     return (
         <>
             <div className="right-toolbar">
-                <button className="toolbar-btn tb-secondary" onClick={() => setSidebarOpen(true)} title="القائمة"><FiMenu /></button>
                 <button className="toolbar-btn" onClick={handleSearchToggle} title="بحث"><FiSearch /></button>
                 <button className="toolbar-btn" onClick={handleLocate} title="موقعي"><FiCrosshair /></button>
                 <div className="toolbar-divider tb-secondary" />
@@ -226,8 +257,36 @@ export function RightToolbar() {
                 </div>
             )}
             {showShare && (
-                <div className="share-panel">
-                    <button onClick={() => setShowShare(false)}>إغلاق</button>
+                <div className="info-panel-overlay" onClick={() => setShowShare(false)}>
+                    <div className="share-modal" onClick={(e) => e.stopPropagation()} dir="rtl">
+                        <div className="info-panel-header">
+                            <h2>مشاركة الموقع</h2>
+                            <button className="close-btn" onClick={() => setShowShare(false)}>×</button>
+                        </div>
+
+                        <div className="share-targets">
+                            {shareTargets.map(({ key, label, Icon, color, href }) => (
+                                <a
+                                    key={key}
+                                    className="share-target"
+                                    href={href}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    onClick={() => setShowShare(false)}
+                                >
+                                    <span className="share-target-icon" style={{ background: color }}><Icon /></span>
+                                    <span className="share-target-label">{label}</span>
+                                </a>
+                            ))}
+                        </div>
+
+                        <div className="share-link-row">
+                            <input className="share-link-input" type="text" value={shareUrl} readOnly onFocus={(e) => e.target.select()} />
+                            <button className={`share-copy-btn ${copied ? 'copied' : ''}`} onClick={handleCopyLink}>
+                                {copied ? <><FiCheck /> تم النسخ</> : <><FiCopy /> نسخ</>}
+                            </button>
+                        </div>
+                    </div>
                 </div>
             )}
         </>

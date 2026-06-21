@@ -102,8 +102,9 @@ export const DRAW_FRAG = `
 precision mediump float;
 varying float v_speed_t;
 uniform float u_alpha;
+uniform vec3 u_color;     // لون الجسيمة (أبيض في الوضع الداكن، داكن في الفاتح)
 void main() {
-    // أبيض خالص دائماً (والذيل يرث نفس اللون الأبيض عبر تلاشي نسيج الشاشة) — أسلوب Zoom Earth.
-    // ألفا يتدرّج قليلاً مع السرعة لإحساس بالعمق، لكن اللون يبقى أبيض صرفاً.
-    gl_FragColor = vec4(255, 255, 255, u_alpha * (0.6 + 0.4 * v_speed_t));
+    // اللون يأتي من uniform ليتكيّف مع الثيم (الجسيمات البيضاء تختفي فوق خريطة فاتحة).
+    // ألفا يتدرّج قليلاً مع السرعة لإحساس بالعمق.
+    gl_FragColor = vec4(u_color, u_alpha * (0.6 + 0.4 * v_speed_t));
 }`;
