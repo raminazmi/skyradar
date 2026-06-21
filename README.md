@@ -1,44 +1,53 @@
-# 🌍 راصد ويذر - Weather Earth
+# 🌍 Sky Radar
 
-نظام عرض الطقس الحي والفوري حول العالم بنماذج جوية متقدمة (GFS و ICON)، مطابق لـ zoom.earth مع دعم عربي كامل.
+A real-time global weather visualization platform, built on a custom WebGL rendering pipeline and visually inspired by [zoom.earth](https://zoom.earth), with full Arabic-first support (RTL UI and Arabic city labels).
 
-## ✨ المميزات الرئيسية
 
-### 🗺️ خريطة تفاعلية متقدمة
-- طبقات طقس متعددة (رياح، أمطار، حرارة، ضغط، رطوبة، غيوم)
-- جسيمات رياح متحركة بواقعية (3500 جسيم)
-- خرائط حرارية بألوان متدرجة
-- شريط زمني مع تشغيل/إيقاف وسرعات متعددة
+## ✨ Features
 
-### 🌤️ نماذج جوية
-- **GFS**: دقة 25كم، 16 يوم، NOAA
-- **ICON**: دقة 13كم، 7.5 أيام، DWD (أكثر دقة!)
-- اختيار سريع بين النماذج مع انتقال سلس
+### 🗺️ Advanced interactive map (MapLibre GL JS + WebGL)
+- Multiple weather layers (wind, precipitation, temperature, clouds) rendered as custom WebGL layers on top of the map
+- Animated GPU wind particles that follow real wind vector data in real time
+- Color-graded heatmaps with gradients tuned to match real-world weather visualization references
+- Hillshade terrain relief from real elevation data, themed separately for light/dark map styles
+- Time slider with autoplay and adjustable speeds
 
-### 🛰️ مصادر بيانات متعددة
-- أقمار صناعية حية (GOES, Himawari, Meteosat)
-- رادار حي (NEXRAD, EUMETNET)
-- تتبع الأعاصير
-- كشف الحرائق (NASA FIRMS)
+### 🌤️ Weather models
+- **GFS**: 25km resolution, 16-day forecast, NOAA
+- **ICON**: 13km resolution, 7.5-day forecast, DWD
+- Quick switching between models with smooth transitions
 
-### 🌐 واجهة عربية كاملة
-- واجهة 100% عربي فصحي
-- تخطيط RTL صحيح
-- وحدات قياس عربية (كم/س، هكتوباسكال، ملم)
-- تواريخ وأوقات عربية
+### 🛰️ Multiple data sources
+- Live weather data via Open-Meteo (GFS/ICON)
+- Cyclone tracking
+- Wildfire detection (NASA FIRMS)
 
-### ⚡ أداء عالي جداً
-- بناء واحد HTML (465 KB مضغوط)
-- تحميل <2 ثانية
-- 60 fps للرياح، 30 fps للخرائق الحرارية
+### 🔍 Search and icons
+- Arabic city search with client-side caching and automatic cancellation of stale requests
+- Realistic weather icons that adapt to time of day (day/night) and current conditions
 
-## 🚀 البدء السريع
+### 🌐 Fully Arabic interface
+- 100% Arabic (Modern Standard Arabic) UI with correct RTL layout
+- Arabic units of measurement (km/h, mm, etc.)
+
+## 🏗️ Tech stack
+
+```
+Frontend: React 19 + TypeScript + Vite + Tailwind CSS + Zustand
+          MapLibre GL JS (react-map-gl) + custom WebGL layers
+Backend:  Laravel (PHP) — aggregates and caches Open-Meteo data
+          (Http::pool for batched requests, two-tier caching: fresh + stale-fallback)
+Database: MySQL
+Cache:    Redis (optional — also works without it via file-based cache)
+```
+
+## 🚀 Getting started
 
 ### Frontend (React)
 ```bash
 npm install
-npm run dev      # تطوير
-npm run build    # إنتاج
+npm run dev      # development
+npm run build    # production
 ```
 
 ### Backend (Laravel)
@@ -51,139 +60,69 @@ php artisan migrate
 php artisan serve
 ```
 
-## 📚 الاستخدام
+The frontend expects the API to be reachable at `/api/v1` (proxied via Vite in development).
 
-1. **فتح الموقع** → يظهر الخريطة الحية
-2. **اختيار الطبقة** من الشريط الجانبي (رياح، أمطار، إلخ)
-3. **تبديل النموذج** بين GFS و ICON
-4. **تشغيل الوقت** لرؤية التطور الزمني
-5. **النقر على الخريطة** لاختيار موقع محدد
+## 📚 Usage
 
-## 🏗️ البنية التقنية
+1. **Open the site** → the live map appears immediately
+2. **Pick a layer** from the sidebar (wind, precipitation, etc.)
+3. **Switch models** between GFS and ICON
+4. **Play the timeline** to see weather evolve over time
+5. **Click the map** or search for a city to select a specific location
 
-```
-Frontend: React.js + Vite + Leaflet.js + Zustand
-Backend: Laravel + Inertia.js + MySQL
-API: RESTful
-Cache: Redis
-Database: MySQL
-```
-
-## 📊 المتطلبات
-
-- **Node.js**: 16+
-- **PHP**: 8.1+
-- **MySQL**: 8.0+
-- **Redis**: (اختياري، للتخزين المؤقت)
-
-## 🎨 الإعدادات
-
-```typescript
-// تخصيص دقة البيانات
-weatherGridService.generateGrid(type, bounds, model, timeIndex, resolution: 30)
-
-// تخصيص عدد الجسيمات
-<WindCanvasLayer particleCount={3500} />
-
-// تخصيص شفافية الخرائط الحرارية
-<HeatmapCanvasLayer opacity={0.65} />
-```
-
-## 📱 التوافقية
-
-| الجهاز | الدعم |
-|------|------|
-| سطح المكتب | ✅ كامل |
-| اللوحات | ✅ كامل |
-| الهواتف | ✅ كامل |
-
-| المتصفح | الإصدار الأدنى |
-|--------|------------|
-| Chrome | 90+ |
-| Firefox | 88+ |
-| Safari | 14+ |
-| Edge | 90+ |
-
-## 🔗 نقاط نهاية API
-
-### الطقس
-```
-GET /api/v1/forecast?lat=&lon=&model=GFS
-GET /api/v1/models/gfs
-GET /api/v1/models/icon
-```
-
-### البيانات الإضافية
-```
-GET /api/v1/satellite/info
-GET /api/v1/radar/region
-GET /api/v1/cyclones/active
-GET /api/v1/wildfires/region
-```
-
-## 📄 الملفات المهمة
+## 📄 Key files
 
 ```
 src/
 ├── components/WeatherMap/
-│   ├── NewWeatherMap.tsx              # المكون الرئيسي
-│   ├── WeatherSidebarIntegrated.tsx   # الشريط الجانبي
-│   ├── CentralLegend.tsx              # مفتاح الألوان
-│   ├── WindCanvasLayer.tsx            # الرياح
-│   └── HeatmapCanvasLayer.tsx         # الخرائط الحرارية
+│   ├── NewWeatherMap.tsx       # Main map component
+│   ├── HeatmapWebGLLayer.tsx   # Heatmap layer (WebGL)
+│   ├── ParticleWebGLLayer.tsx  # Wind particle layer (WebGL)
+│   ├── CentralLegend.tsx       # Color legend
+│   ├── webgl/layerOrder.ts     # Map layer ordering (borders/terrain/coastlines)
+│   └── hooks/                  # Data fetching and styling hooks
 ├── services/
-│   ├── weatherService.ts
-│   └── weatherGridService.ts
+│   ├── weatherGridService.ts   # Weather grid fetching with caching and request batching
+│   └── geocodingService.ts     # City search with caching and stale-request cancellation
 └── store/
     └── weatherStore.ts
+
+backend/
+└── app/
+    ├── Http/Controllers/WeatherController.php
+    └── Services/
+        ├── WeatherService.php      # Weather grid fetching (batching/caching)
+        └── LocationService.php     # Location search (6-hour cache)
 ```
 
-## 🐛 حل المشاكل
+## 🐛 Troubleshooting
 
-### الرياح سريعة جداً؟
-في `WindCanvasLayer.tsx`:
-```typescript
-const zoomFactor = Math.pow(2, 4 - zoom) * 0.08; // قلل 0.08
-```
+### Map feels slow?
+- Lower the `resolution` parameter in grid requests (`weatherGridService`)
+- Enable Redis on the backend for faster caching, or rely on the default file cache
 
-### البيانات لا تتحدث؟
+### Data not updating?
 ```bash
-# تأكد من Redis
+# Make sure Redis is running (optional)
 redis-server
-
-# أعد تشغيل الـ cron
-php artisan schedule:run
 ```
 
-### الخريطة بطيئة؟
-- قلل `particleCount` في `WindCanvasLayer`
-- قلل `resolution` في `generateGrid`
-- استخدم تقنيات WebGL
+## 📜 License
 
-## 📞 الدعم
+Open source — see [LICENSE](LICENSE).
 
-- 📧 البريد: support@weatherearth.com
-- 🐛 الأخطاء: GitHub Issues
-- 💬 النقاشات: GitHub Discussions
+## 🙏 Acknowledgements
 
-## 📜 الترخيص
-
-MIT License - مفتوح المصدر للجميع
-
-## 🙏 شكر خاص
-
-- **NOAA/NCEP** - نموذج GFS
-- **DWD** - نموذج ICON  
-- **Open-Meteo** - API الطقس المجاني
-- **Leaflet.js** - مكتبة الخرائط
-- **NASA FIRMS** - بيانات الحرائق
+- **NOAA/NCEP** — GFS model
+- **DWD** — ICON model
+- **Open-Meteo** — free weather API
+- **MapLibre GL JS** — mapping engine
+- **NASA FIRMS** — wildfire data
 
 ---
 
 <div align="center">
 
-### صُنع بـ ❤️ باستخدام أحدث التقنيات
-
-**راصد ويذر** - عرض الطقس بطريقة جديدة كلياً 🌍🌤️⛅
+### Sky Radar — Weather, visualized differently 🌍🌤️⛅
 
 </div>
