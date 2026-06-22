@@ -76,9 +76,17 @@ export function NewWeatherMap() {
 
     // ── خطافات الجلب والتنسيق (مُستخرَجة لإبقاء الملف < 300 سطر) ──────────────
     useWeatherData({ currentLocation, selectedModel });
-    const { windGrid, heatmapGrid, activeHeatmapType } = useForecastGrids({
-        mapBounds, selectedModel, currentTimeIndex, isPlaying, visibleLayers, tiledScalar: true,
-    });
+
+    // الطبقة السلَّمية الفعّالة (حرارة/ضغط…) تُشتقّ من الطبقات المرئية مباشرةً — بلا أي
+    // جلب نقاط من Open-Meteo (مصدر العرض نُسج PNG محلّية).
+    const activeHeatmapType: ForecastGridType | null = useMemo(() => {
+        const heatmapTypes = FORECAST_LAYER_IDS.filter((l) => l !== 'wind');
+        return heatmapTypes.find((t) => visibleLayers[t]) ?? null;
+    }, [visibleLayers]);
+
+    // حقل الرياح من نسيج GFS المحلّي (R=سرعة، G/B=U/V) — يغذّي الجسيمات وطبقة لون الرياح
+    // وتلميح الرياح بلا Open-Meteo.
+    const windGrid = useWindRaster(currentTimeIndex);
 
     // نُسج GFS الخام متاحة لنموذج GFS فقط؛ عند اختيار ICON نعود لمسار البلاطات (Open-Meteo
     // يخدم ICON) فتتغيّر بيانات الخريطة فعلياً مع المبدّل. (نُسج ICON من DWD لاحقاً.)
@@ -96,9 +104,9 @@ export function NewWeatherMap() {
         if (!mapBounds) return true;
         const type = activeHeatmapType ?? (visibleLayers.wind ? 'wind' : null);
         if (!type) return true;
-        // طبقات النسيج (حرارة) تُحمّل صورتها الخاصة لكل ساعة مستقلّةً عن Open-Meteo،
-        // فلا نُعلّق التشغيل على شبكة نقاط لم تَعُد تُجلب (كان يجمّد تشغيل الحرارة).
-        if (RASTER_TYPES.has(type)) return true;
+        // الطبقات النسيجية (حرارة/رياح…) تُحمّل صورتها لكل ساعة محلّياً، فلا نُعلّق
+        // التشغيل على شبكة نقاط (لا 429). يبقى مسار البلاطات لغير النسيج (ICON) فقط.
+        if (type === 'wind' || RASTER_TYPES.has(type)) return true;
         const bounds = getStableGridBounds(mapBounds);
         if (weatherGridService.getCachedGrid(type, bounds, selectedModel, idx, 6)) return true;
         weatherGridService.prefetchGrid(type, bounds, selectedModel, idx, 6);
@@ -129,14 +137,10 @@ export function NewWeatherMap() {
         setInfoPanelOpen(true);
     };
 
-    // شبكة حرارة دائمة لتلميح المرور — تظهر درجة الحرارة عند المؤشّر حتى لو لم تكن
-    // أي طبقة معروضة (سلوك Zoom Earth).
-    const hoverTempGrid = useHoverTemperatureGrid({ mapBounds, selectedModel, currentTimeIndex });
-
-    // التلميح عند المرور (hover): نُفضّل الطبقة العددية المعروضة (حرارة/ضغط...) إن وُجدت،
-    // وإلا نعود دائماً إلى درجة الحرارة. هكذا يظهر التلميح في كل الأحوال.
-    const hoverGrid = (activeHeatmapType && heatmapGrid) ? heatmapGrid : hoverTempGrid;
-    const hoverType = hoverGrid?.type ?? null;
+    // التلميح عند المرور (hover): نُفضّل الطبقة السلَّمية المعروضة (حرارة/ضغط…) إن وُجدت،
+    // وإلا نعود دائماً إلى درجة الحرارة — فيظهر التلميح في كل الأحوال (سلوك Zoom Earth).
+    // تُقرأ القيمة مباشرةً من نُسج GFS المحلّية بلا أي طلب API.
+    const hoverType: ForecastGridType = activeHeatmapType ?? 'temperature';
 
     const overlayPanelOpen = infoPanelOpen || layerControlsOpen || sidebarOpen || settingsOpen;
     const initialLng = currentLocation?.lon ?? 46.7;
@@ -216,7 +220,7 @@ export function NewWeatherMap() {
                         })()}
 
                         {/* تسميات المدن والدول (مع حرارة كل مدينة الثابتة) */}
-                        <ArabicCityLabels temperatureGrid={hoverTempGrid} darkBase={mapBaseDark} />
+                        <ArabicCityLabels timeIndex={currentTimeIndex} darkBase={mapBaseDark} />
 
                         {/* متتبع الأعاصير والحرائق */}
                         <CycloneTracker />
@@ -238,7 +242,7 @@ export function NewWeatherMap() {
                     </Map>
 
                     {/* تلميح القيمة عند مرور المؤشّر (أسلوب Zoom Earth) */}
-                    <HoverValueTooltip grid={hoverGrid} type={hoverType} windGrid={windGrid} />
+                    <HoverValueTooltip type={hoverType} timeIndex={currentTimeIndex} />
 
                     {/* لوحة التحكم بالطبقات */}
                     <LayerControls />

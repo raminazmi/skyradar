@@ -199,10 +199,10 @@ export function styleAdminBorders(map: MaplibreMap, darkMode: boolean): void {
         const color = isCountry
             ? (darkMode ? 'rgba(235,238,242,0.9)' : 'rgba(0,0,0,0.88)')
             : (darkMode ? 'rgba(200,205,212,0.7)' : 'rgba(35,38,46,0.7)');
-        // عرض أعرض ويتدرّج مع الزووم ليبقى واضحاً
+        // خطوط شعرية رفيعة جداً (كـ Zoom Earth)
         const width = isCountry
-            ? ['interpolate', ['linear'], ['zoom'], 2, 1.4, 5, 2.2, 9, 3.4]
-            : ['interpolate', ['linear'], ['zoom'], 2, 0.7, 5, 1.2, 9, 2.2];
+            ? ['interpolate', ['linear'], ['zoom'], 2, 0.3, 5, 0.6, 9, 1.0]
+            : ['interpolate', ['linear'], ['zoom'], 2, 0.2, 5, 0.35, 9, 0.6];
         try {
             map.setLayoutProperty(layer.id, 'visibility', 'visible');
             map.setLayerZoomRange(layer.id, 0, 24);            // أظهر الحدود الداخلية في كل الزوومات

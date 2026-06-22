@@ -1,0 +1,22 @@
+# توجيه مسارات SPA: أي طلب لملف/مجلد غير موجود يُعاد إلى index.html
+# ليتولى راوتر React عرضه (يمنع 404 عند تحديث صفحة داخلية).
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteBase /
+
+    # لا تعِد كتابة الملفات أو المجلدات الموجودة فعلاً
+    RewriteCond %{REQUEST_FILENAME} -f [OR]
+    RewriteCond %{REQUEST_FILENAME} -d
+    RewriteRule ^ - [L]
+
+    # كل ما عدا ذلك → index.html
+    RewriteRule ^ index.html [L]
+</IfModule>
+
+# تخزين مؤقت لأصول البناء ذات البصمة (hash) لمدة طويلة
+<IfModule mod_expires.c>
+    ExpiresActive On
+    ExpiresByType text/css "access plus 1 year"
+    ExpiresByType application/javascript "access plus 1 year"
+    ExpiresByType image/png "access plus 1 month"
+</IfModule>
