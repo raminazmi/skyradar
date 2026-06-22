@@ -38,6 +38,10 @@ return [
     'openmeteo' => [
         // اضبطه على مثيلك المُستضاف ذاتياً (مثل http://localhost:8080) لإلغاء حدود الحصة.
         'base_url' => env('OPEN_METEO_BASE_URL', 'https://api.open-meteo.com'),
+        // مفتاح اشتراك Open-Meteo التجاري (Standard/Professional). عند ضبطه تُستخدَم
+        // البوّابة التجارية customer-api تلقائياً ويُمرَّر apikey في كل طلب → حصة أعلى.
+        'api_key' => env('OPEN_METEO_API_KEY'),
+        'customer_base_url' => env('OPEN_METEO_CUSTOMER_BASE_URL', 'https://customer-api.open-meteo.com'),
     ],
 
 ];

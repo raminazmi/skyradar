@@ -6,6 +6,19 @@
 
 import type { Map as MaplibreMap } from 'maplibre-gl';
 
+/**
+ * خلفية الخريطة لكل طبقة (مطابقة Zoom Earth): لكل طبقة قاعدة خريطة خاصة بها فتظهر
+ * ألوانها بأعلى دقّة. الحرارة/الإحساس/الندى/الرطوبة على قاعدة فاتحة (فستقية)، أما
+ * الرياح/الهبّات/الأمطار/الغيوم/الضغط فعلى قاعدة داكنة لتبرز ألوانها الزاهية.
+ */
+const LIGHT_BASE_LAYERS = new Set(['temperature', 'feels-like', 'dewpoint', 'humidity']);
+
+/** هل قاعدة خريطة الطبقة الفعّالة داكنة؟ (لا طبقة فعّالة → الثيم العام). */
+export function layerBaseIsDark(activeLayer: string | null | undefined, fallbackDark: boolean): boolean {
+    if (!activeLayer) return fallbackDark;
+    return !LIGHT_BASE_LAYERS.has(activeLayer);
+}
+
 /** يطابق أي طبقة خطّية للحدود الإدارية (دول/ولايات/محافظات). */
 const BOUNDARY_LINE_RE = /boundary|admin|border/i;
 
@@ -66,11 +79,14 @@ export function applyHillshadeTheme(map: MaplibreMap, darkMode: boolean): void {
     const set = (prop: string, val: unknown) => {
         try { map.setPaintProperty('weather-hillshade', prop, val as never); } catch { /* تجاهل */ }
     };
-    // تضاريس خفيفة: ملمس باهت تحت ألوان الطقس بدل أن ينافسها (أقرب لـ Zoom Earth).
-    set('hillshade-exaggeration',    darkMode ? 0.40 : 0.45);
-    set('hillshade-shadow-color',    darkMode ? 'rgba(0,0,0,0.45)'       : 'rgba(60,40,10,0.35)');
-    set('hillshade-highlight-color', darkMode ? 'rgba(120,140,180,0.25)' : 'rgba(255,248,220,0.35)');
-    set('hillshade-accent-color',    darkMode ? 'rgba(30,50,90,0.20)'    : 'rgba(180,130,60,0.18)');
+    // Zoom Earth: القاعدة الفاتحة (حرارة) مسطّحة تماماً بلا تضاريس فتظهر فستقية نقيّة؛
+    // التضاريس الخفيفة للقواعد الداكنة فقط (رياح/أمطار). إخفاؤها يمنع الميل الرمادي/الموحل.
+    try { map.setLayoutProperty('weather-hillshade', 'visibility', darkMode ? 'visible' : 'none'); } catch { /* تجاهل */ }
+    if (!darkMode) return;
+    set('hillshade-exaggeration',    0.40);
+    set('hillshade-shadow-color',    'rgba(0,0,0,0.45)');
+    set('hillshade-highlight-color', 'rgba(120,140,180,0.25)');
+    set('hillshade-accent-color',    'rgba(30,50,90,0.20)');
 }
 
 /**
@@ -90,11 +106,13 @@ export function styleWeatherBase(map: MaplibreMap, darkMode: boolean): void {
         if (!map.getLayer(id)) return;
         try { map.setPaintProperty(id, prop, val as never); } catch { /* تجاهل */ }
     };
-    // الوضع الفاتح: قاعدة بيضاء (بدل الفستقي/الرمادي الذي كان يكسو ألوان الطقس بميلٍ رمادي)
-    // فتظهر ألوان الطقس نقيّة وزاهية كما في Zoom Earth. الماء بأزرق فاتح جداً لتمييز البحر فقط.
-    const land  = darkMode ? '#20242a' : '#ffffff';
-    const water = darkMode ? '#161b22' : '#dbe9f6';
-    const bg    = darkMode ? '#0e1116' : '#ffffff';
+    // الوضع الفاتح: قاعدة فستقية (sage) مطابقة لـ Zoom Earth. ألوان الحرارة شبه الشفّافة
+    // تمتزج فوق هذه القاعدة فتظهر غنيّة ودقيقة (فوق الأبيض كانت تبهت). الماء بأزرق فاتح خفيف.
+    // قاعدة فستقية مُوحَّدة (يابسة + بحر + خلفية) في الوضع الفاتح كـ Zoom Earth — فحيث لم
+    // تصل بلاطات الحرارة بعد، تبقى الخريطة فستقية لا زرقاء/داكنة. الداكن للرياح/الأمطار.
+    const land  = darkMode ? '#20242a' : '#cedb9c';
+    const water = darkMode ? '#161b22' : '#cedb9c';
+    const bg    = darkMode ? '#0e1116' : '#cedb9c';
 
     set('background', 'background-color', bg);
     // ملاحظة مهمة (مطابقة Zoom Earth): طبقة الطقس مُدرَجة أسفل مضلّعات اليابسة/الماء.
@@ -106,7 +124,9 @@ export function styleWeatherBase(map: MaplibreMap, darkMode: boolean): void {
                      'landcover_grass', 'park', 'park_national_park', 'park_nature_reserve',
                      'national_park', 'wood', 'grass', 'globallandcover']) {
         set(l, 'fill-color', land);
-        set(l, 'fill-opacity', 0.35); // تفاصيل اليابسة (غطاء أرضي/حدائق) تبقى ظاهرة تحت الطقس
+        // شفافية منخفضة: القاعدة الفستقية تأتي أساساً من الخلفية تحت الطقس، وهذه الطبقة
+        // فوق الطقس فنُبقيها خفيفة جداً كي لا تكسو ألوان الحرارة بميلٍ أخضر على اليابسة.
+        set(l, 'fill-opacity', 0.10);
     }
     for (const l of ['water', 'water_shadow', 'ocean']) {
         set(l, 'fill-color', water);

@@ -15,6 +15,9 @@ interface Params {
     currentTimeIndex: number;
     isPlaying: boolean;
     visibleLayers: Record<string, boolean>;
+    /** عند true: لا تُجلب شبكة العرض العددية الكبيرة (يتولّاها نظام البلاطات)؛
+     *  يبقى الكشف عن الطبقة الفعّالة فقط لتغذية المفتاح/الجسيمات/التلميح. */
+    tiledScalar?: boolean;
 }
 
 interface Result {
@@ -23,7 +26,7 @@ interface Result {
     activeHeatmapType: ForecastGridType | null;
 }
 
-export function useForecastGrids({ mapBounds, selectedModel, currentTimeIndex, isPlaying, visibleLayers }: Params): Result {
+export function useForecastGrids({ mapBounds, selectedModel, currentTimeIndex, isPlaying, visibleLayers, tiledScalar = false }: Params): Result {
     const [windGrid, setWindGrid]       = useState<WeatherGrid | null>(null);
     const [heatmapGrid, setHeatmapGrid] = useState<WeatherGrid | null>(null);
     const [activeHeatmapType, setActiveHeatmapType] = useState<ForecastGridType | null>(null);
@@ -91,6 +94,11 @@ export function useForecastGrids({ mapBounds, selectedModel, currentTimeIndex, i
             heatmapRequestRef.current += 1; setHeatmapGrid(null); setActiveHeatmapType(null); return;
         }
         setActiveHeatmapType(active);
+
+        // وضع البلاطات: العرض يتولّاه useTiledHeatmap، فلا نجلب شبكة العرض الكبيرة هنا
+        // (نتفادى ازدواج الجلب) — نكتفي بإبقاء activeHeatmapType للمفتاح/الجسيمات/التلميح.
+        if (tiledScalar) { setHeatmapGrid(null); return; }
+
         let cancelled = false;
         const id     = ++heatmapRequestRef.current;
         const bounds = getStableGridBounds(mapBounds);

@@ -16,6 +16,8 @@ import { WeatherInfoPanel } from './WeatherInfoPanel';
 import { LayerControls }    from './LayerControls';
 import { SettingsPanel }    from './SettingsPanel';
 import { HeatmapWebGLLayer }   from './HeatmapWebGLLayer';
+import { TiledHeatmapWebGLLayer } from './TiledHeatmapWebGLLayer';
+import { RasterHeatmapWebGLLayer } from './RasterHeatmapWebGLLayer';
 import { HoverValueTooltip }    from './HoverValueTooltip';
 import { ParticleWebGLLayer }  from './ParticleWebGLLayer';
 import { ArabicCityLabels }    from './ArabicCityLabels';
@@ -32,15 +34,25 @@ import { useWeatherData }     from './hooks/useWeatherData';
 import { useForecastGrids }   from './hooks/useForecastGrids';
 import { weatherGridService } from '../../services/weatherGridService';
 import { getStableGridBounds } from './utils/gridBounds';
+import { layerBaseIsDark }     from './webgl/layerOrder';
 import { useAutoplay }        from './hooks/useAutoplay';
 import { useMapStyling }      from './hooks/useMapStyling';
 import { useHoverTemperatureGrid } from './hooks/useHoverTemperatureGrid';
+import { useTiledHeatmap }    from './hooks/useTiledHeatmap';
 import { FiMapPin }           from 'react-icons/fi';
 
 import './WeatherMap.css';
 
 // ── خريطة الأساس — CartoDB Dark Matter (مبنية على OpenStreetMap، مجانية) ─────
 const DARK_MAP_STYLE = 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json';
+
+// الطبقات ذات نسيج عالمي خام (GFS GRIB2 بدقّة 0.25° كاملة من NOAA، مجاناً، بلا Open-Meteo).
+// كلّها متاحة في منتج GFS pgrb2 الأساسي. (الإحساس الحراري APTMP في المنتج الثانوي فيبقى
+// على البلاطات؛ والرياح تحتاج قناتي U/V + جسيمات فتُعالَج لاحقاً.)
+// ثابت على مستوى الوحدة كي لا يتغيّر مرجعه كل تصيير فيُعيد اشتراك التشغيل بلا داعٍ.
+const RASTER_TYPES = new Set<string>([
+    'temperature', 'dewpoint', 'humidity', 'pressure', 'clouds', 'wind-gusts', 'precipitation',
+]);
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 
@@ -65,7 +77,15 @@ export function NewWeatherMap() {
     // ── خطافات الجلب والتنسيق (مُستخرَجة لإبقاء الملف < 300 سطر) ──────────────
     useWeatherData({ currentLocation, selectedModel });
     const { windGrid, heatmapGrid, activeHeatmapType } = useForecastGrids({
-        mapBounds, selectedModel, currentTimeIndex, isPlaying, visibleLayers,
+        mapBounds, selectedModel, currentTimeIndex, isPlaying, visibleLayers, tiledScalar: true,
+    });
+
+    const useRaster = !!activeHeatmapType && RASTER_TYPES.has(activeHeatmapType);
+
+    // بلاطات الطبقة العددية الفعّالة (لغير طبقات النسيج) — تُجلب وتُعرض مربّعاً مربّعاً.
+    const scalarTiles = useTiledHeatmap({
+        mapBounds, mapZoom: zoomLevel ?? 4, selectedModel, currentTimeIndex,
+        activeType: useRaster ? null : activeHeatmapType,
     });
 
     // جهوزية إطار التشغيل: نتقدّم فقط عندما تكون شبكة الطبقة الفعّالة لذلك الإطار
@@ -74,6 +94,9 @@ export function NewWeatherMap() {
         if (!mapBounds) return true;
         const type = activeHeatmapType ?? (visibleLayers.wind ? 'wind' : null);
         if (!type) return true;
+        // طبقات النسيج (حرارة) تُحمّل صورتها الخاصة لكل ساعة مستقلّةً عن Open-Meteo،
+        // فلا نُعلّق التشغيل على شبكة نقاط لم تَعُد تُجلب (كان يجمّد تشغيل الحرارة).
+        if (RASTER_TYPES.has(type)) return true;
         const bounds = getStableGridBounds(mapBounds);
         if (weatherGridService.getCachedGrid(type, bounds, selectedModel, idx, 6)) return true;
         weatherGridService.prefetchGrid(type, bounds, selectedModel, idx, 6);
@@ -82,8 +105,13 @@ export function NewWeatherMap() {
 
     useAutoplay({ isPlaying, playbackSpeed, weatherData, canAdvance: playbackCanAdvance });
 
+    // قاعدة الخريطة تتبع الطبقة الفعّالة (Zoom Earth): الحرارة على قاعدة فاتحة فستقية،
+    // الرياح/الأمطار على قاعدة داكنة — بغضّ النظر عن مفتاح الوضع الداكن العام للواجهة.
+    const activeLayerKey = visibleLayers.wind ? 'wind' : activeHeatmapType;
+    const mapBaseDark = layerBaseIsDark(activeLayerKey, darkMode);
+
     const { handleMapLoad, handleMoveEnd } = useMapStyling({
-        mapRef, darkMode, setMapBounds, setZoomLevel,
+        mapRef, darkMode: mapBaseDark, setMapBounds, setZoomLevel,
     });
 
     const handleMapClick = (e: MapLayerMouseEvent) => {
@@ -149,13 +177,23 @@ export function NewWeatherMap() {
                             <HeatmapWebGLLayer id="weather-heatmap-wind" grid={windGrid} type="wind" opacity={0.8} />
                         )}
 
-                        {/* طبقة هيتماب البيانات الأخرى — WebGL */}
-                        {heatmapGrid && activeHeatmapType && (
-                            <HeatmapWebGLLayer
+                        {/* الحرارة: نسيج عالمي خام بدقّة كاملة (GFS GRIB2) — مطابقة Zoom Earth */}
+                        {activeHeatmapType && useRaster && (
+                            <RasterHeatmapWebGLLayer
                                 id="weather-heatmap-scalar"
-                                grid={heatmapGrid}
+                                url={`${import.meta.env.BASE_URL}rasters/${activeHeatmapType}_${String(currentTimeIndex).padStart(3, '0')}.png`}
                                 type={activeHeatmapType}
-                                opacity={activeHeatmapType === 'clouds' ? 0.6 : activeHeatmapType === 'precipitation' ? 0.82 : 0.76}
+                                opacity={0.92}
+                            />
+                        )}
+
+                        {/* بقية الطبقات العددية — WebGL مُبلّطة، تحميل مربّع‑مربّع */}
+                        {activeHeatmapType && !useRaster && (
+                            <TiledHeatmapWebGLLayer
+                                id="weather-heatmap-scalar"
+                                tiles={scalarTiles}
+                                type={activeHeatmapType}
+                                opacity={activeHeatmapType === 'clouds' ? 0.6 : activeHeatmapType === 'precipitation' ? 0.85 : 0.92}
                             />
                         )}
 
@@ -168,7 +206,7 @@ export function NewWeatherMap() {
                         })()}
 
                         {/* تسميات المدن والدول (مع حرارة كل مدينة الثابتة) */}
-                        <ArabicCityLabels temperatureGrid={hoverTempGrid} />
+                        <ArabicCityLabels temperatureGrid={hoverTempGrid} darkBase={mapBaseDark} />
 
                         {/* متتبع الأعاصير والحرائق */}
                         <CycloneTracker />

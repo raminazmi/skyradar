@@ -17,16 +17,34 @@ class WeatherService
 
     protected int $gridChunkSize = 100;
 
+    /** مفتاح Open-Meteo التجاري (فارغ = الخطة المجانية). */
+    protected ?string $apiKey;
+
     public function __construct()
     {
-        // عنوان أساس Open-Meteo قابل للضبط: اضبط OPEN_METEO_BASE_URL على
-        // عنوان المثيل المُستضاف ذاتياً (مثل http://localhost:8080) لإلغاء حدود الحصة،
-        // وإلا يستخدم الـ API العام المجاني.
-        $base = rtrim((string) config('services.openmeteo.base_url', 'https://api.open-meteo.com'), '/');
+        // مفتاح تجاري؟ → استخدم بوّابة customer-api تلقائياً (حصة أعلى، بلا حدّ معدّل).
+        // غير ذلك: OPEN_METEO_BASE_URL (مثيل ذاتي) أو الـ API العام المجاني.
+        $this->apiKey = ($k = (string) config('services.openmeteo.api_key', '')) !== '' ? $k : null;
+
+        if ($this->apiKey !== null) {
+            $base = rtrim((string) config('services.openmeteo.customer_base_url', 'https://customer-api.open-meteo.com'), '/');
+        } else {
+            $base = rtrim((string) config('services.openmeteo.base_url', 'https://api.open-meteo.com'), '/');
+        }
+
         $this->modelEndpoints = [
             'GFS'  => "{$base}/v1/gfs",
             'ICON' => "{$base}/v1/dwd-icon",
         ];
+    }
+
+    /** يُضيف apikey إلى استعلام Open-Meteo عند توفّر اشتراك تجاري (وإلا يتركه كما هو). */
+    protected function withApiKey(array $query): array
+    {
+        if ($this->apiKey !== null) {
+            $query['apikey'] = $this->apiKey;
+        }
+        return $query;
     }
 
     public function getForecast($latitude, $longitude, $model = 'GFS', $hours = 168)
@@ -91,7 +109,7 @@ class WeatherService
                 $responses = Http::pool(function (\Illuminate\Http\Client\Pool $pool) use ($chunks, $model, $variables, $forecastHours) {
                     $requests = [];
                     foreach ($chunks as $chunk) {
-                        $query = [
+                        $query = $this->withApiKey([
                             'latitude' => implode(',', array_map(fn ($c) => $this->formatCoordinate($c['lat']), $chunk)),
                             'longitude' => implode(',', array_map(fn ($c) => $this->formatCoordinate($c['lon']), $chunk)),
                             'hourly' => implode(',', $variables),
@@ -101,7 +119,7 @@ class WeatherService
                             'timeformat' => 'unixtime',
                             'timezone' => 'GMT',
                             'forecast_hours' => $forecastHours,
-                        ];
+                        ]);
 
                         $requests[] = $pool->acceptJson()
                             ->withHeaders(['User-Agent' => 'zoom-earth-clone-technical-study/1.0', 'Accept-Encoding' => 'gzip, deflate'])
@@ -205,7 +223,7 @@ class WeatherService
             $query['current'] = 'temperature_2m,wind_speed_10m,weather_code';
         }
 
-        $response = $this->sendProviderRequest($this->getForecastEndpoint($model), $query);
+        $response = $this->sendProviderRequest($this->getForecastEndpoint($model), $this->withApiKey($query));
 
         if ($response->status() === 429) {
             throw new WeatherProviderException('تم تجاوز حد مزود الطقس مؤقتًا.', 429);
@@ -539,7 +557,7 @@ class WeatherService
                 continue;
             }
 
-            $points[$meta['row']][$meta['col']] = $this->nearestProviderPoint(
+            $points[$meta['row']][$meta['col']] = $this->idwProviderPoint(
                 $validPoints,
                 (float) $meta['lat'],
                 (float) $meta['lon']
@@ -549,24 +567,50 @@ class WeatherService
         return $points;
     }
 
-    protected function nearestProviderPoint(array $validPoints, float $lat, float $lon): array
+    /**
+     * تعبئة نقطة مفقودة باستيفاء المسافة العكسية (IDW، أُسّ 2) من النقاط الصالحة.
+     * يستبدل التعبئة بأقرب جار التي كانت تُنتج كتلاً مستطيلة موحّدة بحافة حادّة
+     * (المربّع الأخضر) عند فشل دفعة طلبات. IDW يُنتج حقلاً ناعماً بلا حواف مصطنعة.
+     */
+    protected function idwProviderPoint(array $validPoints, float $lat, float $lon): array
     {
-        $nearest = $validPoints[0];
-        $nearestDistance = PHP_FLOAT_MAX;
+        $weightSum = 0.0;
+        $valueSum = 0.0;
+        $uSum = 0.0;
+        $vSum = 0.0;
+        $hasUV = false;
 
         foreach ($validPoints as $point) {
-            $distance = (($point['lat'] - $lat) ** 2) + (($point['lon'] - $lon) ** 2);
-            if ($distance < $nearestDistance) {
-                $nearest = $point;
-                $nearestDistance = $distance;
+            // مربّع المسافة (تقريب مستوٍ كافٍ لشبكة محلية)
+            $d2 = (($point['lat'] - $lat) ** 2) + (($point['lon'] - $lon) ** 2);
+            if ($d2 < 1e-9) {
+                // النقطة نفسها صالحة فعلياً — أعِدها كما هي
+                $copy = $point;
+                $copy['lat'] = $lat;
+                $copy['lon'] = $lon;
+                return $copy;
+            }
+            $w = 1.0 / $d2; // IDW أُسّ 2 (1/المسافة²) → تنعيم محلّي سلس
+            $weightSum += $w;
+            $valueSum += $w * $point['value'];
+            if (isset($point['u'], $point['v'])) {
+                $hasUV = true;
+                $uSum += $w * $point['u'];
+                $vSum += $w * $point['v'];
             }
         }
 
-        $copy = $nearest;
-        $copy['lat'] = $lat;
-        $copy['lon'] = $lon;
+        $result = ['lat' => $lat, 'lon' => $lon, 'value' => $valueSum / $weightSum];
+        if ($hasUV) {
+            $u = $uSum / $weightSum;
+            $v = $vSum / $weightSum;
+            $result['u'] = $u;
+            $result['v'] = $v;
+            $result['speed'] = sqrt(($u ** 2) + ($v ** 2));
+            $result['direction'] = fmod(270 - rad2deg(atan2($v, $u)) + 360, 360);
+        }
 
-        return $copy;
+        return $result;
     }
 
     protected function getUnitForGridType(string $type): string

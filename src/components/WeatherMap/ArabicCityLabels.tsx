@@ -112,11 +112,16 @@ const cities: MapLabel[] = [
 
 const ALL_LABELS = [...continents, ...countries, ...seas, ...cities];
 
-interface ArabicCityLabelsProps { temperatureGrid?: WeatherGrid | null; }
+interface ArabicCityLabelsProps {
+    temperatureGrid?: WeatherGrid | null;
+    /** ثيم قاعدة الخريطة الفعلي (يتبع الطبقة الفعّالة)؛ يحدّد لون نصّ التسميات. */
+    darkBase?: boolean;
+}
 
-export function ArabicCityLabels({ temperatureGrid = null }: ArabicCityLabelsProps) {
+export function ArabicCityLabels({ temperatureGrid = null, darkBase }: ArabicCityLabelsProps) {
     const mapRef = useMapRef();
     const { darkMode, units, setCurrentLocation, setInfoPanelOpen } = useWeatherStore();
+    const effectiveDark = darkBase ?? darkMode;
     const hostRef  = useRef<HTMLDivElement | null>(null);
     const animRef  = useRef(0);
 
@@ -169,7 +174,7 @@ export function ArabicCityLabels({ temperatureGrid = null }: ArabicCityLabelsPro
                 }
                 const clickable = label.kind !== 'sea';
 
-                chunks.push(`<div class="map-label map-label-${label.kind} ${darkMode ? 'dark' : 'light'}${clickable ? ' label-clickable' : ''}"
+                chunks.push(`<div class="map-label map-label-${label.kind} ${effectiveDark ? 'dark' : 'light'}${clickable ? ' label-clickable' : ''}"
                     style="position:absolute;left:${pt.x}px;top:${pt.y}px;font-size:${base + boost}px;transform:translate(-50%,-50%);${clickable ? 'pointer-events:auto;' : ''}"
                     data-lat="${label.lat}" data-lon="${label.lon}">
                     ${dot}<span class="label-text">${label.name}</span>${badge}
@@ -197,7 +202,7 @@ export function ArabicCityLabels({ temperatureGrid = null }: ArabicCityLabelsPro
             cancelAnimationFrame(animRef.current);
             host.remove();
         };
-    }, [mapRef, darkMode, units.temperature, temperatureGrid]);
+    }, [mapRef, effectiveDark, units.temperature, temperatureGrid]);
 
     return null;
 }
