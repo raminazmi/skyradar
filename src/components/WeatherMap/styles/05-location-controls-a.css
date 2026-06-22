@@ -184,3 +184,58 @@
 .layer-toggle.on {
     background: #667eea;
 }
+
+/* المتغيّرات الفرعية للطبقة (سرعة/هبّات، فعلي/إحساس…) — تظهر مُزاحة تحت الرئيسية */
+.layer-variants {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 2px 38px 6px 6px; /* إزاحة لليمين بمحاذاة اسم الطبقة (RTL) */
+}
+
+.layer-variant-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    min-height: 30px;
+    padding: 3px 8px;
+    border: none;
+    border-radius: 7px;
+    background: transparent;
+    color: inherit;
+    opacity: 0.62;
+    font-family: inherit;
+    font-size: 13px;
+    cursor: pointer;
+    text-align: right;
+}
+
+.layer-variant-item:hover {
+    background: var(--hover-bg);
+    opacity: 0.85;
+}
+
+.layer-variant-item.active {
+    opacity: 1;
+    font-weight: 700;
+}
+
+.variant-dot {
+    width: 9px;
+    height: 9px;
+    border-radius: 999px;
+    border: 1.5px solid rgba(255, 255, 255, 0.45);
+    flex-shrink: 0;
+}
+
+.variant-dot.on {
+    background: #667eea;
+    border-color: #667eea;
+}
+
+.layer-controls-divider {
+    height: 1px;
+    margin: 8px 6px;
+    background: var(--border-color, rgba(255, 255, 255, 0.12));
+}

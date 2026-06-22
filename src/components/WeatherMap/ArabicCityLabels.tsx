@@ -6,7 +6,7 @@
 import { useEffect, useRef } from 'react';
 import { useMapRef } from './MapContext';
 import { useWeatherStore } from '../../store/weatherStore';
-import { weatherGridService, WeatherGrid } from '../../services/weatherGridService';
+import { rasterSampler } from '../../services/rasterSampler';
 import { getHeatmapColor } from '../../services/colorScales';
 
 /** يختار لون نصّ مقروء (أبيض/أسود) حسب إضاءة لون الخلفية rgba. */
@@ -113,12 +113,13 @@ const cities: MapLabel[] = [
 const ALL_LABELS = [...continents, ...countries, ...seas, ...cities];
 
 interface ArabicCityLabelsProps {
-    temperatureGrid?: WeatherGrid | null;
+    /** إطار الوقت الحالي — تُقرأ حرارة المدن من نسيج GFS لهذا الإطار. */
+    timeIndex?: number;
     /** ثيم قاعدة الخريطة الفعلي (يتبع الطبقة الفعّالة)؛ يحدّد لون نصّ التسميات. */
     darkBase?: boolean;
 }
 
-export function ArabicCityLabels({ temperatureGrid = null, darkBase }: ArabicCityLabelsProps) {
+export function ArabicCityLabels({ timeIndex = 0, darkBase }: ArabicCityLabelsProps) {
     const mapRef = useMapRef();
     const { darkMode, units, setCurrentLocation, setInfoPanelOpen } = useWeatherStore();
     const effectiveDark = darkBase ?? darkMode;
@@ -128,6 +129,7 @@ export function ArabicCityLabels({ temperatureGrid = null, darkBase }: ArabicCit
     useEffect(() => {
         const map = mapRef.current;
         if (!map) return;
+        rasterSampler.prefetch('temperature', timeIndex);
 
         const container = map.getContainer();
         const host      = document.createElement('div');
@@ -156,8 +158,8 @@ export function ArabicCityLabels({ temperatureGrid = null, darkBase }: ArabicCit
                 const pt = mapObj.project([label.lon, label.lat]);
                 if (pt.x < -120 || pt.x > w + 120 || pt.y < -60 || pt.y > h + 60) continue;
 
-                const rawTemp = temperatureGrid && (label.kind === 'city' || label.kind === 'capital')
-                    ? weatherGridService.interpolate(temperatureGrid, label.lat, label.lon)?.value
+                const rawTemp = (label.kind === 'city' || label.kind === 'capital')
+                    ? rasterSampler.sampleScalar('temperature', timeIndex, label.lat, label.lon) ?? undefined
                     : undefined;
                 const temp = rawTemp === undefined ? undefined
                     : units.temperature === 'fahrenheit' ? Math.round((rawTemp * 9) / 5 + 32) : Math.round(rawTemp);
@@ -202,7 +204,7 @@ export function ArabicCityLabels({ temperatureGrid = null, darkBase }: ArabicCit
             cancelAnimationFrame(animRef.current);
             host.remove();
         };
-    }, [mapRef, effectiveDark, units.temperature, temperatureGrid]);
+    }, [mapRef, effectiveDark, units.temperature, timeIndex]);
 
     return null;
 }

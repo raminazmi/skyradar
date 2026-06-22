@@ -6,7 +6,7 @@
  * الخريطة: CartoDB Dark Matter (تصميم داكن مجاني مبني على OSM)
  */
 
-import { useCallback, useEffect, useRef } from 'react';
+import { useCallback, useEffect, useMemo, useRef } from 'react';
 import Map, { Marker, type MapRef, type MapLayerMouseEvent } from 'react-map-gl/maplibre';
 import 'maplibre-gl/dist/maplibre-gl.css';
 
@@ -31,14 +31,14 @@ import { MapContext }           from './MapContext';
 
 import { useWeatherStore }    from '../../store/weatherStore';
 import { useWeatherData }     from './hooks/useWeatherData';
-import { useForecastGrids }   from './hooks/useForecastGrids';
 import { weatherGridService } from '../../services/weatherGridService';
 import { getStableGridBounds } from './utils/gridBounds';
 import { layerBaseIsDark }     from './webgl/layerOrder';
 import { useAutoplay }        from './hooks/useAutoplay';
 import { useMapStyling }      from './hooks/useMapStyling';
-import { useHoverTemperatureGrid } from './hooks/useHoverTemperatureGrid';
 import { useTiledHeatmap }    from './hooks/useTiledHeatmap';
+import { useWindRaster }      from './hooks/useWindRaster';
+import { FORECAST_LAYER_IDS, type ForecastGridType } from '../../config/weatherLayers';
 import { FiMapPin }           from 'react-icons/fi';
 
 import './WeatherMap.css';
@@ -80,7 +80,9 @@ export function NewWeatherMap() {
         mapBounds, selectedModel, currentTimeIndex, isPlaying, visibleLayers, tiledScalar: true,
     });
 
-    const useRaster = !!activeHeatmapType && RASTER_TYPES.has(activeHeatmapType);
+    // نُسج GFS الخام متاحة لنموذج GFS فقط؛ عند اختيار ICON نعود لمسار البلاطات (Open-Meteo
+    // يخدم ICON) فتتغيّر بيانات الخريطة فعلياً مع المبدّل. (نُسج ICON من DWD لاحقاً.)
+    const useRaster = !!activeHeatmapType && RASTER_TYPES.has(activeHeatmapType) && selectedModel === 'GFS';
 
     // بلاطات الطبقة العددية الفعّالة (لغير طبقات النسيج) — تُجلب وتُعرض مربّعاً مربّعاً.
     const scalarTiles = useTiledHeatmap({
@@ -103,7 +105,15 @@ export function NewWeatherMap() {
         return false;
     }, [mapBounds, activeHeatmapType, visibleLayers.wind, selectedModel]);
 
-    useAutoplay({ isPlaying, playbackSpeed, weatherData, canAdvance: playbackCanAdvance });
+    // محور زمني مستقلّ عن Open-Meteo: ساعات توقّع GFS (نولّد نسيجاً لكلٍّ منها). يبقى
+    // الشريط الزمني والتشغيل يعملان حتى لو نفدت حصة Open-Meteo أو لم تُستخدَم إطلاقاً.
+    const FORECAST_HORIZON_HOURS = 24;
+    const forecastTimes = useMemo(() => {
+        const base = Math.floor(Date.now() / 3_600_000) * 3600; // بداية الساعة (يونكس/ثوانٍ)
+        return Array.from({ length: FORECAST_HORIZON_HOURS + 1 }, (_, i) => base + i * 3600);
+    }, []);
+
+    useAutoplay({ isPlaying, playbackSpeed, frameCount: forecastTimes.length, canAdvance: playbackCanAdvance });
 
     // قاعدة الخريطة تتبع الطبقة الفعّالة (Zoom Earth): الحرارة على قاعدة فاتحة فستقية،
     // الرياح/الأمطار على قاعدة داكنة — بغضّ النظر عن مفتاح الوضع الداكن العام للواجهة.
@@ -255,14 +265,12 @@ export function NewWeatherMap() {
                         </span>
                     </div>
 
-                    {/* شريط الوقت */}
-                    {weatherData && (
-                        <TimeSlider
-                            times={weatherData.hourly.time}
-                            currentTimeIndex={currentTimeIndex}
-                            isPlaying={isPlaying}
-                        />
-                    )}
+                    {/* شريط الوقت — مستقلّ عن Open-Meteo: محوره ساعات توقّع GFS (نُسج النسيج) */}
+                    <TimeSlider
+                        times={forecastTimes}
+                        currentTimeIndex={currentTimeIndex}
+                        isPlaying={isPlaying}
+                    />
                 </div>
 
                 {/* لوحة الإعدادات */}

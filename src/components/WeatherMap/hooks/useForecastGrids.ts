@@ -6,6 +6,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { weatherGridService, type WeatherGrid } from '../../../services/weatherGridService';
+import { logApiErrorThrottled } from '../../../services/apiRateLimit';
 import { FORECAST_LAYER_IDS, type ForecastGridType } from '../../../config/weatherLayers';
 import { getStableGridBounds, getForecastGridResolution, chooseDisplayGrid, type GridBounds } from '../utils/gridBounds';
 
@@ -77,7 +78,7 @@ export function useForecastGrids({ mapBounds, selectedModel, currentTimeIndex, i
                     weatherGridService.prefetchGrid('wind', bounds, selectedModel, currentTimeIndex + i, 6);
                 }
                 if (!isPlaying) weatherGridService.prefetchGrid('wind', bounds, selectedModel, currentTimeIndex - 1, 6);
-            } catch (e) { console.error('خطأ في شبكة الرياح:', e); }
+            } catch (e) { logApiErrorThrottled('خطأ في شبكة الرياح:', e); }
         }, isPlaying ? 0 : 200);
 
         return () => { cancelled = true; window.clearTimeout(timer); };
@@ -133,7 +134,7 @@ export function useForecastGrids({ mapBounds, selectedModel, currentTimeIndex, i
                     weatherGridService.prefetchGrid(active, bounds, selectedModel, currentTimeIndex + i, 6);
                 }
                 if (!isPlaying) weatherGridService.prefetchGrid(active, bounds, selectedModel, currentTimeIndex - 1, 6);
-            } catch (e) { console.error('خطأ في شبكة الخريطة الحرارية:', e); }
+            } catch (e) { logApiErrorThrottled('خطأ في شبكة الخريطة الحرارية:', e); }
         }, isPlaying ? 0 : 200);
 
         return () => { cancelled = true; window.clearTimeout(timer); };

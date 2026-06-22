@@ -14,9 +14,6 @@ use Illuminate\Support\Facades\Route;
 |
 */
 
-// Weather Map Dashboard (Inertia View)
-Route::get('/', [WeatherController::class, 'index'])->name('weather.index');
-
 // API Endpoints for model data fetching
 Route::prefix('api')->group(function () {
     Route::get('/forecast', [WeatherController::class, 'forecast'])->name('weather.forecast');
@@ -26,3 +23,11 @@ Route::prefix('api')->group(function () {
     Route::get('/cyclones', [WeatherController::class, 'tropicalCyclones'])->name('weather.cyclones');
     Route::get('/wildfires', [WeatherController::class, 'wildfires'])->name('weather.wildfires');
 });
+
+// SPA fallback: تخدم بناء React (index.html) لأي مسار ليس API.
+// يجب نسخ ناتج بناء الفرونت (dist/*) إلى backend/public قبل النشر.
+Route::get('/{any}', function () {
+    $index = public_path('index.html');
+    abort_unless(file_exists($index), 404);
+    return response()->file($index);
+})->where('any', '^(?!api).*$');

@@ -82,7 +82,77 @@ def write_png_gray(path, img):
         f.write(png)
 
 
+def write_png_rgb(path, r, g, b):
+    """كاتب PNG ملوّن 8-بت (RGB) بلا اعتماديات — لقنوات الرياح (سرعة/U/V)."""
+    h, w = r.shape
+
+    def chunk(typ, data):
+        body = typ + data
+        return struct.pack(">I", len(data)) + body + struct.pack(">I", zlib.crc32(body) & 0xffffffff)
+
+    raw = bytearray()
+    rgb = np.dstack([r, g, b]).astype(np.uint8)
+    for y in range(h):
+        raw.append(0)
+        raw.extend(rgb[y].tobytes())
+    png = (b'\x89PNG\r\n\x1a\n'
+           + chunk(b'IHDR', struct.pack(">IIBBBBB", w, h, 8, 2, 0, 0, 0))  # color type 2 = RGB
+           + chunk(b'IDAT', zlib.compress(bytes(raw), 9))
+           + chunk(b'IEND', b''))
+    os.makedirs(os.path.dirname(os.path.abspath(path)), exist_ok=True)
+    with open(path, 'wb') as f:
+        f.write(png)
+
+
+# مدى تطبيع مركّبتي U/V (km/h) — يطابق WIND_UV_MAX في weatherTextures.ts.
+WIND_UV_MAX = 60.0
+WIND_SPEED_MAX = 120.0  # يطابق VALUE_RANGES['wind']
+
+
+def wind_url(hour):
+    now = datetime.datetime.utcnow()
+    for back in range(0, 30, 6):
+        t = now - datetime.timedelta(hours=back)
+        run = (t.hour // 6) * 6
+        day = t.strftime('%Y%m%d')
+        q = (f"?file=gfs.t{run:02d}z.pgrb2.0p25.f{hour:03d}"
+             f"&var_UGRD=on&var_VGRD=on&lev_10_m_above_ground=on"
+             f"&leftlon=0&rightlon=360&toplat=90&bottomlat=-90"
+             f"&dir=%2Fgfs.{day}%2F{run:02d}%2Fatmos")
+        url = NOMADS + q
+        try:
+            with urllib.request.urlopen(urllib.request.Request(url, method='HEAD'), timeout=30) as rr:
+                if rr.status == 200:
+                    return url, f"{day}/{run:02d} f{hour:03d}"
+        except Exception:
+            continue
+    raise RuntimeError("تعذّر إيجاد دورة GFS متاحة للرياح")
+
+
+def generate_wind(hour, out_path):
+    url, label = wind_url(hour)
+    tmp = os.path.join(tempfile.gettempdir(), f"gfs_wind_{hour:03d}.grb2")
+    urllib.request.urlretrieve(url, tmp)
+    ds = cfgrib.open_dataset(tmp, backend_kwargs={'indexpath': ''})
+    u = np.asarray(ds['u10'].values, dtype=np.float64) * 3.6   # m/s → km/h
+    v = np.asarray(ds['v10'].values, dtype=np.float64) * 3.6
+
+    for a in (u, v):
+        pass
+    u = np.roll(u, u.shape[1] // 2, axis=1)[::-1, :]
+    v = np.roll(v, v.shape[1] // 2, axis=1)[::-1, :]
+    speed = np.sqrt(u * u + v * v)
+
+    R = np.clip(speed / WIND_SPEED_MAX, 0, 1) * 255
+    G = (np.clip(u, -WIND_UV_MAX, WIND_UV_MAX) / WIND_UV_MAX * 0.5 + 0.5) * 255
+    B = (np.clip(v, -WIND_UV_MAX, WIND_UV_MAX) / WIND_UV_MAX * 0.5 + 0.5) * 255
+    write_png_rgb(out_path, R.round(), G.round(), B.round())
+    print(f"تمّ: {out_path} ({label}, speed max={float(speed.max()):.0f} km/h)", flush=True)
+
+
 def generate_one(cfg, var, hour, out_path):
+    if var == 'wind':
+        return generate_wind(hour, out_path)
     url, label = latest_run_url(cfg, hour)
     tmp = os.path.join(tempfile.gettempdir(), f"gfs_{var}_{hour:03d}.grb2")
     urllib.request.urlretrieve(url, tmp)
@@ -110,13 +180,13 @@ def parse_hours(spec):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument('--var', required=True, choices=list(VAR_CONFIG))
+    ap.add_argument('--var', required=True, choices=list(VAR_CONFIG) + ['wind'])
     ap.add_argument('--hour', type=int, default=0)
     ap.add_argument('--hours', help="نطاق ساعات دفعةً واحدة، مثل 0-24 أو 0,3,6 (مع --outdir)")
     ap.add_argument('--out', help="مسار ملف واحد (مع --hour)")
     ap.add_argument('--outdir', help="مجلّد المخرجات للدفعة (مع --hours)؛ الاسم <var>_<hhh>.png")
     args = ap.parse_args()
-    cfg = VAR_CONFIG[args.var]
+    cfg = VAR_CONFIG.get(args.var)  # 'wind' لا يستخدم cfg (قنوات U/V خاصة)
 
     if args.hours:
         outdir = args.outdir or '.'

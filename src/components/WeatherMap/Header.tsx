@@ -2,7 +2,7 @@ import { useWeatherStore } from '../../store/weatherStore';
 import { FiMenu, FiSettings } from 'react-icons/fi';
 
 export function Header() {
-    const { setSidebarOpen, setSettingsOpen, selectedModel, availableModels } = useWeatherStore();
+    const { setSidebarOpen, setSettingsOpen, selectedModel, setSelectedModel, availableModels } = useWeatherStore();
 
     return (
         <div className="app-header">
@@ -18,27 +18,28 @@ export function Header() {
                     <img src="/sky-radar-logo-dark.svg" alt="Sky Radar" className="h-14 w-auto shrink-0" />
                 </div>
             </div>
-            <div className="absolute left-1/2 -translate-x-1/2 w-[150px] flex justify-center">
-                <div
-                    className={`flex items-center gap-[6px] px-3 py-1 bg-white/[0.06] border rounded-full text-xs font-bold ${selectedModel.toLowerCase() === 'gfs'
-                        ? 'border-[#2196f3] text-[#2196f3]'
-                        : selectedModel.toLowerCase() === 'icon'
-                            ? 'border-[#4caf50] text-[#4caf50]'
-                            : 'border-[var(--border-color)]'
-                        }`}
-                >
-                    <span
-                        className={`w-2 h-2 rounded-full bg-current animate-pulse ${selectedModel.toLowerCase() === 'gfs'
-                            ? 'bg-[#2196f3]'
-                            : selectedModel.toLowerCase() === 'icon'
-                                ? 'bg-[#4caf50]'
-                                : ''
-                            }`}
-                    ></span>
-                    <span>{selectedModel}</span>
-                    <span className="text-[11px] opacity-60 font-medium">
-                        {availableModels.find(m => m.id === selectedModel)?.resolution}
-                    </span>
+            {/* مبدّل النموذج الجوي (مثل Zoom Earth): زرّان GFS/ICON — النقر يبدّل بيانات الخريطة */}
+            <div className="absolute left-1/2 -translate-x-1/2 flex justify-center">
+                <div className="flex items-center gap-0.5 p-0.5 bg-black/40 border border-[var(--border-color)] rounded-full backdrop-blur-sm">
+                    {availableModels.map((model) => {
+                        const active = selectedModel === model.id;
+                        return (
+                            <button
+                                key={model.id}
+                                onClick={() => setSelectedModel(model.id)}
+                                title={`${model.name} — ${model.resolution}`}
+                                className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs cursor-pointer transition-all duration-200 ${active
+                                    ? 'bg-white text-gray-900 shadow font-bold'
+                                    : 'text-white/60 hover:text-white/90 font-semibold'
+                                    }`}
+                            >
+                                <span>{model.name}</span>
+                                <span className={`text-[11px] font-medium ${active ? 'opacity-60' : 'opacity-50'}`}>
+                                    {model.resolution}
+                                </span>
+                            </button>
+                        );
+                    })}
                 </div>
             </div>
             <div className="flex items-center">

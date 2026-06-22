@@ -4,21 +4,22 @@
  * تماماً كأسلوب Zoom Earth: سطر القيمة الأساسية بوحدتها (مثل 33°C)، وسطر الرياح
  * (السرعة + سهم الاتجاه + الجهة WSW) عند توفّر شبكة الرياح.
  *
- * يقرأ القيمة عبر weatherGridService.interpolate (استيفاء ثنائي الخطّية على الشبكة)
- * فتظهر قيمة سلسة في أي نقطة بين عُقد الشبكة، لا قيمة العُقد فقط.
+ * يقرأ القيمة مباشرةً من نُسج GFS المحلّية عبر rasterSampler (بلا أي طلب API)،
+ * فتظهر قيمة سلسة في أي نقطة بين عُقد الشبكة عبر استيفاء ثنائي الخطّية على الصورة.
  */
 
 import { useEffect, useRef, useState } from 'react';
 import type { MapMouseEvent } from 'maplibre-gl';
 import { useMapRef } from './MapContext';
 import { useWeatherStore } from '../../store/weatherStore';
-import { weatherGridService, type WeatherGrid } from '../../services/weatherGridService';
+import { rasterSampler } from '../../services/rasterSampler';
 import type { ForecastGridType } from '../../config/weatherLayers';
 
 interface HoverValueTooltipProps {
-    grid: WeatherGrid | null;
+    /** الطبقة السلَّمية الفعّالة (للسطر الأساسي). */
     type: ForecastGridType | null;
-    windGrid?: WeatherGrid | null;
+    /** إطار الوقت الحالي (يحدّد نسيج الإطار المقروء). */
+    timeIndex: number;
 }
 
 /** تنسيق القيمة الأساسية بوحدتها (مع تحويل الحرارة لفهرنهايت عند الحاجة). */
@@ -55,15 +56,21 @@ function dirToCardinal(deg: number): string {
 interface WindInfo { speed: number; dir: number; cardinal: string }
 interface HoverState { x: number; y: number; main: string; wind: WindInfo | null }
 
-export function HoverValueTooltip({ grid, type, windGrid = null }: HoverValueTooltipProps) {
+export function HoverValueTooltip({ type, timeIndex }: HoverValueTooltipProps) {
     const mapRef = useMapRef();
     const fahrenheit = useWeatherStore((s) => s.units.temperature === 'fahrenheit');
     const [hover, setHover] = useState<HoverState | null>(null);
 
     // نحتفظ بأحدث البيانات في ref حتى لا نعيد ربط المستمعات مع كل تغيّر بيانات.
-    const dataRef = useRef<{ grid: WeatherGrid | null; type: ForecastGridType | null; windGrid: WeatherGrid | null; fahrenheit: boolean }>(
-        { grid, type, windGrid, fahrenheit });
-    dataRef.current = { grid, type, windGrid, fahrenheit };
+    const dataRef = useRef<{ type: ForecastGridType | null; timeIndex: number; fahrenheit: boolean }>(
+        { type, timeIndex, fahrenheit });
+    dataRef.current = { type, timeIndex, fahrenheit };
+
+    // نحمّل نسيج الطبقة الفعّالة + الرياح للإطار الحالي مسبقاً ليجهز التلميح فوراً.
+    useEffect(() => {
+        if (type) rasterSampler.prefetch(type, timeIndex);
+        rasterSampler.prefetch('wind', timeIndex);
+    }, [type, timeIndex]);
 
     useEffect(() => {
         let map: ReturnType<NonNullable<typeof mapRef.current>['getMap']> | null = null;
@@ -75,18 +82,18 @@ export function HoverValueTooltip({ grid, type, windGrid = null }: HoverValueToo
         const flush = () => {
             rafId = null;
             if (!pending) return;
-            const { grid: g, type: t, windGrid: wg, fahrenheit: f } = dataRef.current;
-            if (!g || !t) { setHover(null); return; }
-            const gp = weatherGridService.interpolate(g, pending.lat, pending.lon);
-            if (!gp || !Number.isFinite(gp.value)) { setHover(null); return; }
+            const { type: t, timeIndex: ti, fahrenheit: f } = dataRef.current;
+            if (!t) { setHover(null); return; }
+            const value = rasterSampler.sampleScalar(t, ti, pending.lat, pending.lon);
+            if (value === null || !Number.isFinite(value)) { setHover(null); return; }
 
-            // سطر الرياح: من شبكة الرياح إن توفّرت (تحوي u/v → سرعة واتجاه)
+            // سطر الرياح: من نسيج الرياح المحلّي (U/V → سرعة واتجاه)
             let wind: WindInfo | null = null;
-            const wp = wg ? weatherGridService.interpolate(wg, pending.lat, pending.lon) : null;
-            if (wp && wp.speed !== undefined && wp.direction !== undefined && wp.speed >= 0.5) {
+            const wp = rasterSampler.sampleWind(ti, pending.lat, pending.lon);
+            if (wp && wp.speed >= 0.5) {
                 wind = { speed: wp.speed, dir: wp.direction, cardinal: dirToCardinal(wp.direction) };
             }
-            setHover({ x: pending.x, y: pending.y, main: formatMain(t, gp.value, f), wind });
+            setHover({ x: pending.x, y: pending.y, main: formatMain(t, value, f), wind });
         };
 
         const onMove = (e: MapMouseEvent) => {

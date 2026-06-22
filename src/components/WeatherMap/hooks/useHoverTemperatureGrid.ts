@@ -9,6 +9,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { weatherGridService, type WeatherGrid } from '../../../services/weatherGridService';
+import { logApiErrorThrottled } from '../../../services/apiRateLimit';
 import { getStableGridBounds, getForecastGridResolution, type GridBounds } from '../utils/gridBounds';
 
 interface Params {
@@ -36,7 +37,7 @@ export function useHoverTemperatureGrid({ mapBounds, selectedModel, currentTimeI
             try {
                 const g = await weatherGridService.generateGrid('temperature', bounds, selectedModel, currentTimeIndex, qRes);
                 if (!cancelled && reqRef.current === id) setGrid(g);
-            } catch (e) { console.error('خطأ في شبكة حرارة التلميح:', e); }
+            } catch (e) { logApiErrorThrottled('خطأ في شبكة حرارة التلميح:', e); }
         }, 250);
 
         return () => { cancelled = true; window.clearTimeout(timer); };

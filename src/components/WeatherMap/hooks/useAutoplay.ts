@@ -4,12 +4,13 @@
  */
 
 import { useEffect } from 'react';
-import { useWeatherStore, type WeatherData } from '../../../store/weatherStore';
+import { useWeatherStore } from '../../../store/weatherStore';
 
 interface Params {
     isPlaying: boolean;
     playbackSpeed: number;
-    weatherData: WeatherData | null;
+    /** عدد إطارات الشريط الزمني (ساعات التوقّع) — مستقلّ عن Open-Meteo. */
+    frameCount: number;
     /**
      * يُرجع true إذا كان إطار الوقت المطلوب جاهزاً (مخزّن) للعرض. إن أرجع false،
      * يؤجّل التشغيلُ التقدّمَ ويحفّز التحميل المُسبق — فلا يظهر إطار مجمّد (منطق Zoom Earth).
@@ -17,10 +18,10 @@ interface Params {
     canAdvance?: (timeIndex: number) => boolean;
 }
 
-export function useAutoplay({ isPlaying, playbackSpeed, weatherData, canAdvance }: Params): void {
+export function useAutoplay({ isPlaying, playbackSpeed, frameCount, canAdvance }: Params): void {
     useEffect(() => {
-        if (!isPlaying || !weatherData?.hourly.time) return;
-        const length = weatherData.hourly.time.length;
+        if (!isPlaying || frameCount < 2) return;
+        const length = frameCount;
         // نتحقّق على فترات قصيرة (نبضات) فنتقدّم فور جهوزية الإطار، لا على إيقاع ثابت أعمى.
         const frameMs = 800 / playbackSpeed;
         const tickMs  = Math.max(80, Math.min(frameMs, 200));
@@ -46,5 +47,5 @@ export function useAutoplay({ isPlaying, playbackSpeed, weatherData, canAdvance 
         }, tickMs);
 
         return () => clearInterval(interval);
-    }, [isPlaying, playbackSpeed, weatherData, canAdvance]);
+    }, [isPlaying, playbackSpeed, frameCount, canAdvance]);
 }

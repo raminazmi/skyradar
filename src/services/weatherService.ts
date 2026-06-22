@@ -1,5 +1,6 @@
 import axios from 'axios';
 import { apiBaseUrl } from './apiBase';
+import { isApiCoolingDown, noteApiFailure, noteApiSuccess } from './apiRateLimit';
 
 export interface WeatherResponse {
     latitude: number;
@@ -74,16 +75,24 @@ class WeatherService {
         const existing = this.inFlight.get(cacheKey);
         if (existing) return existing;
 
+        // قاطع الدائرة: أثناء التهدئة لا نُرسل طلباً جديداً للمزوّد.
+        if (isApiCoolingDown()) {
+            if (cached) return cached.data;
+            return Promise.reject(new Error('Weather API temporarily unavailable (rate limited).'));
+        }
+
         const request = axios.get(`${this.baseUrl}/forecast`, {
             params: { latitude: lat, longitude: normalizedLon, model, hours },
             timeout: 30000,
         })
             .then((response) => {
                 const data = response.data as WeatherResponse;
+                noteApiSuccess();
                 this.cache.set(cacheKey, { data, timestamp: Date.now() });
                 return data;
             })
             .catch((error) => {
+                noteApiFailure(error);
                 if (cached) return cached.data;
                 throw new Error(error.response?.data?.message ?? 'Unable to fetch live weather data from the API.');
             })

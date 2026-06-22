@@ -1,5 +1,6 @@
 import axios from 'axios';
 import { apiBaseUrl } from './apiBase';
+import { isApiCoolingDown, noteApiFailure, noteApiSuccess } from './apiRateLimit';
 import type { ForecastGridType } from '../config/weatherLayers';
 
 export interface GridPoint {
@@ -91,6 +92,7 @@ class WeatherGridService {
 
     prefetchGrid(type: ForecastGridType, bounds: GridBounds, model: 'GFS' | 'ICON', timeIndex = 0, resolution = 30): void {
         const safeResolution = this.resolveRequestResolution(bounds, resolution);
+        if (isApiCoolingDown()) return; // لا تحميل مُسبق أثناء التهدئة
         if (timeIndex < 0 || this.getCachedGrid(type, bounds, model, timeIndex, safeResolution)) return;
 
         const cacheKey = this.buildCacheKey(type, bounds, model, timeIndex, safeResolution);
@@ -117,16 +119,25 @@ class WeatherGridService {
         const existing = this.inFlight.get(cacheKey);
         if (existing) return existing;
 
+        // قاطع الدائرة: أثناء التهدئة (بعد بلوغ الحصّة) لا نُرسل طلباً جديداً —
+        // نعيد آخر نسخة مخزّنة إن وُجدت، وإلا نفشل بهدوء دون إغراق الخادم/الكونسول.
+        if (isApiCoolingDown()) {
+            if (cached) return cached.data;
+            return Promise.reject(new Error('Weather API temporarily unavailable (rate limited).'));
+        }
+
         const request = axios.get(`${apiBaseUrl}/grid`, {
             params: { ...normalizedBounds, model, type, timeIndex, resolution: safeResolution },
             timeout: 30000,
         })
             .then((response) => {
                 const grid = response.data as WeatherGrid;
+                noteApiSuccess();
                 this.rememberGrid(cacheKey, grid);
                 return grid;
             })
             .catch((error) => {
+                noteApiFailure(error);
                 if (cached) return cached.data;
                 throw new Error(error.response?.data?.message ?? 'Unable to fetch live weather grid from the API.');
             })
