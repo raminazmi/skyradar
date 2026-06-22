@@ -66,10 +66,11 @@ export function applyHillshadeTheme(map: MaplibreMap, darkMode: boolean): void {
     const set = (prop: string, val: unknown) => {
         try { map.setPaintProperty('weather-hillshade', prop, val as never); } catch { /* تجاهل */ }
     };
-    set('hillshade-exaggeration',    darkMode ? 0.85 : 0.90);
-    set('hillshade-shadow-color',    darkMode ? 'rgba(0,0,0,0.95)'       : 'rgba(60,40,10,0.85)');
-    set('hillshade-highlight-color', darkMode ? 'rgba(120,140,180,0.55)' : 'rgba(255,248,220,0.80)');
-    set('hillshade-accent-color',    darkMode ? 'rgba(30,50,90,0.45)'    : 'rgba(180,130,60,0.40)');
+    // تضاريس خفيفة: ملمس باهت تحت ألوان الطقس بدل أن ينافسها (أقرب لـ Zoom Earth).
+    set('hillshade-exaggeration',    darkMode ? 0.40 : 0.45);
+    set('hillshade-shadow-color',    darkMode ? 'rgba(0,0,0,0.45)'       : 'rgba(60,40,10,0.35)');
+    set('hillshade-highlight-color', darkMode ? 'rgba(120,140,180,0.25)' : 'rgba(255,248,220,0.35)');
+    set('hillshade-accent-color',    darkMode ? 'rgba(30,50,90,0.20)'    : 'rgba(180,130,60,0.18)');
 }
 
 /**
@@ -109,7 +110,7 @@ export function styleWeatherBase(map: MaplibreMap, darkMode: boolean): void {
     }
     for (const l of ['water', 'water_shadow', 'ocean']) {
         set(l, 'fill-color', water);
-        set(l, 'fill-opacity', 0.30); // لمسة خفيفة تميّز البحر بصرياً دون كتم لون الطقس
+        set(l, 'fill-opacity', 0.12); // لمسة خفيفة تميّز البحر بصرياً دون كتم لون الطقس
     }
     for (const l of ['building', 'building-top']) {
         set(l, 'fill-opacity', 0.5);

@@ -91,7 +91,7 @@ class WeatherController extends Controller
             'model' => 'required|in:GFS,ICON',
             'type' => 'required|in:wind,wind-gusts,temperature,feels-like,precipitation,pressure,humidity,dewpoint,clouds',
             'timeIndex' => 'nullable|integer|min:0|max:383',
-            'resolution' => 'nullable|integer|min:4|max:30',
+            'resolution' => 'nullable|integer|min:4|max:60',
         ]);
 
         try {

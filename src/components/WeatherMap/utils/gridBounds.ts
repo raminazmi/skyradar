@@ -53,9 +53,11 @@ export function getForecastGridResolution(bounds: GridBounds, requested: number)
         Math.abs(bounds.north - bounds.south),
         Math.abs(bounds.east  - bounds.west)
     );
-    if (span >= 90) return Math.min(requested, 16);
-    if (span >= 45) return Math.min(requested, 18);
-    return Math.min(requested, 20);
+    // كثافة عالية لإبراز البقع الساحلية والحقول المحلية بدل التدرّجات القُطرية الناعمة.
+    if (span >= 90) return Math.min(requested, 24);
+    if (span >= 45) return Math.min(requested, 32);
+    if (span >= 15) return Math.min(requested, 38);
+    return Math.min(requested, 44);
 }
 
 /** يختار أوّل شبكة من مصدر حيّ فعلي من بين المرشّحات. */

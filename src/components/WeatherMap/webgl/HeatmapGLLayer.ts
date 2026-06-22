@@ -40,9 +40,22 @@ precision highp float;
 varying vec2 v_merc;
 uniform sampler2D u_value;      // قيمة الشبكة المُطبّعة (R) + صلاحية (A)
 uniform sampler2D u_ramp;       // شريط الألوان 256×1 (premultiplied)
+uniform sampler2D u_mask;       // قناع يابسة/بحر بإسقاط مركاتور (R: يابسة>0.5)
+uniform float u_useMask;        // 1 = كسر الاستيفاء عند الساحل (حافة حادّة)
+uniform vec2 u_gridSize;        // (cols, rows) لشبكة القيم
 uniform float u_opacity;
 uniform vec4 u_bounds;          // (west, south, east, north) بالدرجات
 const float PI = 3.141592653589793;
+
+// mercator v (0=شمال أعلى .. 1=جنوب) لخط عرض معطى — لمطابقة عيّنة القناع.
+float mercV(float latDeg) {
+    float lat = radians(latDeg);
+    return (1.0 - log(tan(PI * 0.25 + lat * 0.5)) / PI) * 0.5;
+}
+float isLand(vec2 mercUV) {
+    return texture2D(u_mask, mercUV).r > 0.5 ? 1.0 : 0.0;
+}
+
 void main() {
     float lng = v_merc.x * 360.0 - 180.0;
     float latRad = 2.0 * atan(exp(PI * (1.0 - 2.0 * v_merc.y))) - PI * 0.5;
@@ -50,9 +63,44 @@ void main() {
     float u = (lng - u_bounds.x) / (u_bounds.z - u_bounds.x);
     float v = (lat - u_bounds.y) / (u_bounds.w - u_bounds.y);
     if (u < 0.0 || u > 1.0 || v < 0.0 || v > 1.0) discard;
-    vec4 cell = texture2D(u_value, vec2(u, v));
-    if (cell.a < 0.5) discard;                       // نقطة مفقودة
-    vec4 col = texture2D(u_ramp, vec2(cell.r, 0.5)); // premultiplied
+
+    // المسار البسيط: استيفاء خطّي عتادي (بلا قناع).
+    if (u_useMask < 0.5) {
+        vec4 cell = texture2D(u_value, vec2(u, v));
+        if (cell.a < 0.5) discard;                       // نقطة مفقودة
+        vec4 col = texture2D(u_ramp, vec2(cell.r, 0.5)); // premultiplied
+        gl_FragColor = col * u_opacity;
+        return;
+    }
+
+    // المسار الواعي بالساحل: استيفاء ثنائي يدوي يُضعِّف العيّنات المخالفة لنوع
+    // البكسل (يابسة/بحر) فينكسر الحقل اللوني عند خطّ الساحل بحافة حادّة كـ Zoom Earth.
+    float pixelLand = isLand(vec2(v_merc.x, v_merc.y));
+    vec2 gs = u_gridSize;
+    float fx = u * gs.x - 0.5;
+    float fy = v * gs.y - 0.5;
+    float x0 = floor(fx), y0 = floor(fy);
+    float dx = fx - x0, dy = fy - y0;
+
+    float valSum = 0.0, wSum = 0.0;
+    for (int j = 0; j < 2; j++) {
+        for (int i = 0; i < 2; i++) {
+            vec2 cuv = clamp(vec2((x0 + float(i) + 0.5) / gs.x,
+                                  (y0 + float(j) + 0.5) / gs.y), vec2(0.0), vec2(1.0));
+            vec4 cell = texture2D(u_value, cuv);
+            if (cell.a < 0.5) continue;                  // عيّنة مفقودة
+            float bw = (i == 0 ? (1.0 - dx) : dx) * (j == 0 ? (1.0 - dy) : dy);
+            float sLon = u_bounds.x + cuv.x * (u_bounds.z - u_bounds.x);
+            float sLat = u_bounds.y + cuv.y * (u_bounds.w - u_bounds.y);
+            float sLand = isLand(vec2((sLon + 180.0) / 360.0, mercV(sLat)));
+            float typeW = (sLand == pixelLand) ? 1.0 : 0.04; // المخالف يكاد يُلغى
+            float w = bw * typeW;
+            valSum += cell.r * w;
+            wSum += w;
+        }
+    }
+    if (wSum <= 0.0) discard;
+    vec4 col = texture2D(u_ramp, vec2(valSum / wSum, 0.5));
     gl_FragColor = col * u_opacity;
 }`;
 
@@ -70,6 +118,8 @@ export class HeatmapGLLayer implements CustomLayerInterface {
     private quadBuffer: WebGLBuffer | null = null;
     private valueTexture: WebGLTexture | null = null;
     private rampTexture: WebGLTexture | null = null;
+    private maskTexture: WebGLTexture | null = null;
+    private maskReady = false;
 
     private grid: WeatherGrid | null = null;
     private layerType: ForecastGridType;
@@ -106,10 +156,34 @@ export class HeatmapGLLayer implements CustomLayerInterface {
     onAdd(map: MaplibreMap, gl: GLContext) {
         this.map = map;
         this.program = createProgram(gl, VERTEX_SRC, FRAGMENT_SRC);
-        this.loc = getLocations(gl, this.program, ['a_pos'], ['u_matrix', 'u_value', 'u_ramp', 'u_opacity', 'u_bounds']);
+        this.loc = getLocations(gl, this.program, ['a_pos'],
+            ['u_matrix', 'u_value', 'u_ramp', 'u_mask', 'u_useMask', 'u_gridSize', 'u_opacity', 'u_bounds']);
         this.rampTexture = createTexture(gl, 256, 1, null, { filter: gl.LINEAR });
         this.valueTexture = createTexture(gl, 1, 1, new Uint8Array([0, 0, 0, 0]), { filter: gl.LINEAR });
+        // قناع مبدئي 1×1 "يابسة" حتى يصل القناع الحقيقي (سلوك = استيفاء عادي).
+        this.maskTexture = createTexture(gl, 1, 1, new Uint8Array([255, 255, 255, 255]), { filter: gl.LINEAR });
+        this.loadMask(gl);
         this.quadBuffer = gl.createBuffer();
+    }
+
+    /** يحمّل قناع اليابسة/البحر (mercator PNG) إلى نسيج، ويُفعّل كسر الاستيفاء عند الساحل. */
+    private loadMask(gl: GLContext) {
+        const img = new Image();
+        img.crossOrigin = 'anonymous';
+        img.onload = () => {
+            if (!this.maskTexture) return;
+            try {
+                gl.bindTexture(gl.TEXTURE_2D, this.maskTexture);
+                gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, img);
+                gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+                gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+                gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+                gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+                this.maskReady = true;
+                this.map?.triggerRepaint();
+            } catch { /* تجاهل: نبقى على الاستيفاء العادي */ }
+        };
+        img.src = `${import.meta.env.BASE_URL}landmask.png`;
     }
 
     onRemove(_map: MaplibreMap, gl: GLContext) {
@@ -117,7 +191,8 @@ export class HeatmapGLLayer implements CustomLayerInterface {
         if (this.quadBuffer) gl.deleteBuffer(this.quadBuffer);
         if (this.valueTexture) gl.deleteTexture(this.valueTexture);
         if (this.rampTexture) gl.deleteTexture(this.rampTexture);
-        this.program = this.quadBuffer = this.valueTexture = this.rampTexture = null;
+        if (this.maskTexture) gl.deleteTexture(this.maskTexture);
+        this.program = this.quadBuffer = this.valueTexture = this.rampTexture = this.maskTexture = null;
         this.map = null;
     }
 
@@ -153,11 +228,19 @@ export class HeatmapGLLayer implements CustomLayerInterface {
         const b = this.grid.bounds;
         gl.uniform4f(this.loc.uniforms.u_bounds, b.west, b.south, b.east, b.north);
         gl.uniform1f(this.loc.uniforms.u_opacity, this.opacity);
+        gl.uniform2f(this.loc.uniforms.u_gridSize, this.grid.cols, this.grid.rows);
+        // القناع يُفعَّل فقط للحقول السطحية المرتبطة بنوع السطح (حرارة/إحساس/ندى/رطوبة)؛
+        // الأمطار/الغيوم/الضغط تعبر السواحل فيزيائياً فلا يجوز كسرها عندها.
+        const coastalField = this.layerType === 'temperature' || this.layerType === 'feels-like'
+            || this.layerType === 'dewpoint' || this.layerType === 'humidity';
+        gl.uniform1f(this.loc.uniforms.u_useMask, this.maskReady && coastalField ? 1 : 0);
 
         bindTexture(gl, this.valueTexture, 0);
         gl.uniform1i(this.loc.uniforms.u_value, 0);
         bindTexture(gl, this.rampTexture, 1);
         gl.uniform1i(this.loc.uniforms.u_ramp, 1);
+        bindTexture(gl, this.maskTexture!, 2);
+        gl.uniform1i(this.loc.uniforms.u_mask, 2);
 
         gl.bindBuffer(gl.ARRAY_BUFFER, this.quadBuffer);
         gl.enableVertexAttribArray(this.loc.attributes.a_pos);

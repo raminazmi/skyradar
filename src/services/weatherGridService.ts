@@ -154,8 +154,10 @@ class WeatherGridService {
         const lonSpan = Math.abs(normalizedBounds.east - normalizedBounds.west);
         const span = Math.max(latSpan, lonSpan);
 
-        if (span >= 90) return Math.min(requested, 7);
-        if (span >= 45) return Math.min(requested, 10);
+        // دقّة عالية لإظهار التباين الساحلي (بقع اليابسة/البحر) كما في Zoom Earth.
+        // البيانات نفسها (GFS/ICON) تحمل تباين البر/البحر؛ تظهره الكثافة العالية فقط.
+        if (span >= 90) return Math.min(requested, 24);
+        if (span >= 45) return Math.min(requested, 32);
         return requested;
     }
 

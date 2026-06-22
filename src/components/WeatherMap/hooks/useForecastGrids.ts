@@ -44,7 +44,7 @@ export function useForecastGrids({ mapBounds, selectedModel, currentTimeIndex, i
         let cancelled = false;
         const id     = ++windRequestRef.current;
         const bounds = getStableGridBounds(mapBounds);
-        const qRes   = getForecastGridResolution(bounds, activeForecastLayer === 'wind' ? 28 : 24);
+        const qRes   = getForecastGridResolution(bounds, activeForecastLayer === 'wind' ? 36 : 44);
 
         const cached = chooseDisplayGrid(
             weatherGridService.getCachedGrid('wind', bounds, selectedModel, currentTimeIndex, qRes),
@@ -94,7 +94,7 @@ export function useForecastGrids({ mapBounds, selectedModel, currentTimeIndex, i
         let cancelled = false;
         const id     = ++heatmapRequestRef.current;
         const bounds = getStableGridBounds(mapBounds);
-        const qRes   = getForecastGridResolution(bounds, 28);
+        const qRes   = getForecastGridResolution(bounds, 44);
 
         const cached = chooseDisplayGrid(
             weatherGridService.getCachedGrid(active, bounds, selectedModel, currentTimeIndex, qRes),
