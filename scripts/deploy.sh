@@ -35,6 +35,10 @@ npm run build
 rm -rf "$BACKEND_DIR/public/assets"
 cp -r dist/* "$BACKEND_DIR/public/"
 
+echo "==> [5b/7] توليد نُسج الطقس (rasters) — لم تعد تأتي من git"
+OUTDIR="$BACKEND_DIR/public/rasters" bash "$APP_DIR/scripts/gen-rasters.sh" || \
+  echo "!! تحذير: فشل توليد بعض الـ rasters (تحقّق من بايثون/الاعتماديات). تابع النشر."
+
 echo "==> [6/7] صلاحيات وتخزين مؤقت"
 cd "$BACKEND_DIR"
 chmod -R 775 storage bootstrap/cache
