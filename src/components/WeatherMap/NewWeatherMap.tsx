@@ -6,7 +6,7 @@
  * الخريطة: CartoDB Dark Matter (تصميم داكن مجاني مبني على OSM)
  */
 
-import { useCallback, useEffect, useMemo, useRef } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Map, { Marker, type MapRef, type MapLayerMouseEvent } from 'react-map-gl/maplibre';
 import 'maplibre-gl/dist/maplibre-gl.css';
 
@@ -63,7 +63,7 @@ export function NewWeatherMap() {
         settingsOpen, setSettingsOpen,
         infoPanelOpen, layerControlsOpen, sidebarOpen,
         mapBounds, zoomLevel,
-        setCurrentLocation, setInfoPanelOpen,
+        setCurrentLocation, setInfoPanelOpen, setCurrentTimeIndex,
         setMapBounds, setZoomLevel,
         initializeModels,
         layerAnimationSettings,
@@ -113,13 +113,34 @@ export function NewWeatherMap() {
         return false;
     }, [mapBounds, activeHeatmapType, visibleLayers.wind, selectedModel]);
 
-    // محور زمني مستقلّ عن Open-Meteo: ساعات توقّع GFS (نولّد نسيجاً لكلٍّ منها). يبقى
-    // الشريط الزمني والتشغيل يعملان حتى لو نفدت حصة Open-Meteo أو لم تُستخدَم إطلاقاً.
-    const FORECAST_HORIZON_HOURS = 24;
-    const forecastTimes = useMemo(() => {
-        const base = Math.floor(Date.now() / 3_600_000) * 3600; // بداية الساعة (يونكس/ثوانٍ)
-        return Array.from({ length: FORECAST_HORIZON_HOURS + 1 }, (_, i) => base + i * 3600);
+    // محور زمني مستقلّ عن Open-Meteo: ساعات توقّع GFS (نسيج لكلٍّ منها). نقرأ زمن دورة
+    // النموذج من rasters/meta.json كي يطابق رقم الإطار (f000..fNN) زمن صلاحيته الحقيقي،
+    // فلا يظهر إطار الليل (f000) تحت تسمية "الآن". يبقى الشريط يعمل حتى بلا Open-Meteo.
+    const [rasterMeta, setRasterMeta] = useState<{ run_epoch: number; hours: number } | null>(null);
+    useEffect(() => {
+        let cancelled = false;
+        fetch(`${import.meta.env.BASE_URL}rasters/meta.json`, { cache: 'no-store' })
+            .then((r) => (r.ok ? r.json() : null))
+            .then((m) => { if (!cancelled && m && m.run_epoch) setRasterMeta(m); })
+            .catch(() => { /* بلا meta: نسقط على السلوك الافتراضي (إزاحة 0) */ });
+        return () => { cancelled = true; };
     }, []);
+
+    // زمن صلاحية الإطار i = زمن الدورة + i ساعة. بلا meta: نبدأ من الساعة الحالية.
+    const runEpoch = rasterMeta?.run_epoch ?? Math.floor(Date.now() / 3_600_000) * 3600;
+    const frameHours = rasterMeta?.hours ?? 25;
+    const forecastTimes = useMemo(
+        () => Array.from({ length: frameHours }, (_, i) => runEpoch + i * 3600),
+        [runEpoch, frameHours],
+    );
+    // الإطار المطابق للوقت الحالي (إزاحة من زمن الدورة) — نفتح عليه مرّة واحدة عند وصول meta.
+    const nowFrameRef = useRef(false);
+    useEffect(() => {
+        if (!rasterMeta || nowFrameRef.current) return;
+        const idx = Math.round((Date.now() / 1000 - rasterMeta.run_epoch) / 3600);
+        setCurrentTimeIndex(Math.max(0, Math.min(rasterMeta.hours - 1, idx)));
+        nowFrameRef.current = true;
+    }, [rasterMeta, setCurrentTimeIndex]);
 
     useAutoplay({ isPlaying, playbackSpeed, frameCount: forecastTimes.length, canAdvance: playbackCanAdvance });
 
