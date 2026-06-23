@@ -32,7 +32,13 @@ import numpy as np
 import xarray as xr
 
 def _open_grib(path):
-    return xr.open_dataset(path, engine='cfgrib', backend_kwargs={'indexpath': ''})
+    # بعض حقول GFS (مثل PRATE) تحوي عدّة stepType (instant/avg) لنفس المتغيّر،
+    # فيرفض cfgrib فتحها بلا تحديد. نحاول عادياً ثم نرجع للنسخة اللحظية (instant).
+    try:
+        return xr.open_dataset(path, engine='cfgrib', backend_kwargs={'indexpath': ''})
+    except Exception:
+        return xr.open_dataset(path, engine='cfgrib',
+                               backend_kwargs={'indexpath': '', 'filter_by_keys': {'stepType': 'instant'}})
 
 # مجال القيم لكل متغيّر — مطابق تماماً لـ VALUE_RANGES في الواجهة، والإزاحة لتحويل الوحدة.
 VAR_CONFIG = {
