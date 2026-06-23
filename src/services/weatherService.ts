@@ -10,7 +10,7 @@ export interface WeatherResponse {
     elevation: number;
     stale?: boolean;
     providerMessage?: string;
-    model?: 'GFS' | 'ICON';
+    model?: 'GFS' | 'ECMWF';
     hourly: {
         time: Array<string | number>;
         temperature_2m: number[];
@@ -46,7 +46,7 @@ class WeatherService {
         return ((((value + 180) % 360) + 360) % 360) - 180;
     }
 
-    private buildCacheKey(lat: number, lon: number, model: 'GFS' | 'ICON', hours: number): string {
+    private buildCacheKey(lat: number, lon: number, model: 'GFS' | 'ECMWF', hours: number): string {
         return [lat.toFixed(3), lon.toFixed(3), model, hours].join('_');
     }
 
@@ -62,7 +62,7 @@ class WeatherService {
     async getWeatherData(
         lat: number,
         lon: number,
-        model: 'GFS' | 'ICON' = 'GFS',
+        model: 'GFS' | 'ECMWF' = 'GFS',
         hours: number = 168
     ): Promise<WeatherResponse> {
         const normalizedLon = this.normalizeLongitude(lon);
@@ -104,7 +104,7 @@ class WeatherService {
         return request;
     }
 
-    async getWindData(lat: number, lon: number, model: 'GFS' | 'ICON' = 'GFS', hours = 48) {
+    async getWindData(lat: number, lon: number, model: 'GFS' | 'ECMWF' = 'GFS', hours = 48) {
         const data = await this.getWeatherData(lat, lon, model, hours);
         return {
             time: this.normalizeTimes(data.hourly.time),
@@ -114,7 +114,7 @@ class WeatherService {
         };
     }
 
-    async getPrecipitationData(lat: number, lon: number, model: 'GFS' | 'ICON' = 'GFS', hours = 168) {
+    async getPrecipitationData(lat: number, lon: number, model: 'GFS' | 'ECMWF' = 'GFS', hours = 168) {
         const data = await this.getWeatherData(lat, lon, model, hours);
         return {
             time: this.normalizeTimes(data.hourly.time),
@@ -124,7 +124,7 @@ class WeatherService {
         };
     }
 
-    async getTemperatureData(lat: number, lon: number, model: 'GFS' | 'ICON' = 'GFS', hours = 168) {
+    async getTemperatureData(lat: number, lon: number, model: 'GFS' | 'ECMWF' = 'GFS', hours = 168) {
         const data = await this.getWeatherData(lat, lon, model, hours);
         return {
             time: this.normalizeTimes(data.hourly.time),
@@ -134,12 +134,12 @@ class WeatherService {
         };
     }
 
-    async getPressureData(lat: number, lon: number, model: 'GFS' | 'ICON' = 'GFS', hours = 168) {
+    async getPressureData(lat: number, lon: number, model: 'GFS' | 'ECMWF' = 'GFS', hours = 168) {
         const data = await this.getWeatherData(lat, lon, model, hours);
         return { time: this.normalizeTimes(data.hourly.time), pressure: data.hourly.surface_pressure };
     }
 
-    async getHumidityData(lat: number, lon: number, model: 'GFS' | 'ICON' = 'GFS', hours = 168) {
+    async getHumidityData(lat: number, lon: number, model: 'GFS' | 'ECMWF' = 'GFS', hours = 168) {
         const data = await this.getWeatherData(lat, lon, model, hours);
         return {
             time: this.normalizeTimes(data.hourly.time),
@@ -148,7 +148,7 @@ class WeatherService {
         };
     }
 
-    async getCloudData(lat: number, lon: number, model: 'GFS' | 'ICON' = 'GFS', hours = 168) {
+    async getCloudData(lat: number, lon: number, model: 'GFS' | 'ECMWF' = 'GFS', hours = 168) {
         const data = await this.getWeatherData(lat, lon, model, hours);
         return { time: this.normalizeTimes(data.hourly.time), cloudCover: data.hourly.cloud_cover };
     }

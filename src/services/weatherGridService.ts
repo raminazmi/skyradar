@@ -23,7 +23,7 @@ export interface WeatherGrid {
     samplingResolution?: number;
     source?: string;
     provider?: string;
-    model?: 'GFS' | 'ICON';
+    model?: 'GFS' | 'ECMWF';
     runTime?: string;
     validTime?: string;
     unit?: string;
@@ -66,7 +66,7 @@ class WeatherGridService {
         };
     }
 
-    getCachedGrid(type: ForecastGridType, bounds: GridBounds, model: 'GFS' | 'ICON', timeIndex = 0, resolution = 30) {
+    getCachedGrid(type: ForecastGridType, bounds: GridBounds, model: 'GFS' | 'ECMWF', timeIndex = 0, resolution = 30) {
         const safeResolution = this.resolveRequestResolution(bounds, resolution);
         const cached = this.cache.get(this.buildCacheKey(type, bounds, model, timeIndex, safeResolution));
         if (cached && Date.now() - cached.timestamp < this.cacheTtl) {
@@ -90,7 +90,7 @@ class WeatherGridService {
         return this.isUsableGrid(grid) && grid.source !== 'synthetic';
     }
 
-    prefetchGrid(type: ForecastGridType, bounds: GridBounds, model: 'GFS' | 'ICON', timeIndex = 0, resolution = 30): void {
+    prefetchGrid(type: ForecastGridType, bounds: GridBounds, model: 'GFS' | 'ECMWF', timeIndex = 0, resolution = 30): void {
         const safeResolution = this.resolveRequestResolution(bounds, resolution);
         if (isApiCoolingDown()) return; // لا تحميل مُسبق أثناء التهدئة
         if (timeIndex < 0 || this.getCachedGrid(type, bounds, model, timeIndex, safeResolution)) return;
@@ -106,7 +106,7 @@ class WeatherGridService {
     async generateGrid(
         type: ForecastGridType,
         bounds: GridBounds,
-        model: 'GFS' | 'ICON',
+        model: 'GFS' | 'ECMWF',
         timeIndex = 0,
         resolution = 30
     ): Promise<WeatherGrid> {
@@ -175,7 +175,7 @@ class WeatherGridService {
     private buildCacheKey(
         type: ForecastGridType,
         bounds: GridBounds,
-        model: 'GFS' | 'ICON',
+        model: 'GFS' | 'ECMWF',
         timeIndex: number,
         resolution: number
     ): string {
