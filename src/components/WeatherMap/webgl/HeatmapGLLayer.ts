@@ -56,6 +56,26 @@ float isLand(vec2 mercUV) {
     return texture2D(u_mask, mercUV).r > 0.5 ? 1.0 : 0.0;
 }
 
+// استيفاء ثنائي ناعم (Hermite smoothstep) للقيمة المُطبّعة مع احترام العيّنات المفقودة.
+vec2 sampleSmooth(vec2 uv) {
+    vec2 gs = u_gridSize;
+    vec2 f = uv * gs - 0.5;
+    vec2 i0 = floor(f);
+    vec2 d = f - i0;
+    d = d * d * (3.0 - 2.0 * d);
+    float rSum = 0.0, wSum = 0.0;
+    for (int j = 0; j < 2; j++) {
+        for (int i = 0; i < 2; i++) {
+            vec2 cuv = clamp((i0 + vec2(float(i), float(j)) + 0.5) / gs, vec2(0.0), vec2(1.0));
+            vec4 cell = texture2D(u_value, cuv);
+            if (cell.a < 0.5) continue;
+            float w = (i == 0 ? (1.0 - d.x) : d.x) * (j == 0 ? (1.0 - d.y) : d.y);
+            rSum += cell.r * w; wSum += w;
+        }
+    }
+    return vec2(wSum > 0.0 ? rSum / wSum : 0.0, wSum > 0.0 ? 1.0 : 0.0);
+}
+
 void main() {
     float lng = v_merc.x * 360.0 - 180.0;
     float latRad = 2.0 * atan(exp(PI * (1.0 - 2.0 * v_merc.y))) - PI * 0.5;
@@ -64,11 +84,11 @@ void main() {
     float v = (lat - u_bounds.y) / (u_bounds.w - u_bounds.y);
     if (u < 0.0 || u > 1.0 || v < 0.0 || v > 1.0) discard;
 
-    // المسار البسيط: استيفاء خطّي عتادي (بلا قناع).
+    // المسار البسيط: استيفاء ناعم (smoothstep) بلا قناع.
     if (u_useMask < 0.5) {
-        vec4 cell = texture2D(u_value, vec2(u, v));
-        if (cell.a < 0.5) discard;                       // نقطة مفقودة
-        vec4 col = texture2D(u_ramp, vec2(cell.r, 0.5)); // premultiplied
+        vec2 ra = sampleSmooth(vec2(u, v));
+        if (ra.y < 0.5) discard;                         // نقطة مفقودة
+        vec4 col = texture2D(u_ramp, vec2(ra.x, 0.5));   // premultiplied
         gl_FragColor = col * u_opacity;
         return;
     }
@@ -81,6 +101,8 @@ void main() {
     float fy = v * gs.y - 0.5;
     float x0 = floor(fx), y0 = floor(fy);
     float dx = fx - x0, dy = fy - y0;
+    dx = dx * dx * (3.0 - 2.0 * dx);        // smoothstep في المسار الساحلي
+    dy = dy * dy * (3.0 - 2.0 * dy);
 
     float valSum = 0.0, wSum = 0.0;
     for (int j = 0; j < 2; j++) {
