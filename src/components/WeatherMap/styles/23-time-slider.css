@@ -206,3 +206,44 @@
     color: rgba(230, 237, 243, 0.72);
 }
 
+
+/* مبدّل النموذج على الصفحة الرئيسية (GFS/ECMWF) — أسلوب Zoom Earth، فوق شريط الوقت */
+.main-model-switch {
+    display: flex;
+    gap: 6px;
+    justify-content: center;
+    margin: 0 auto 8px;
+    padding: 4px;
+    width: fit-content;
+    background: rgba(20, 24, 31, 0.72);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 999px;
+    backdrop-filter: blur(8px);
+    pointer-events: auto;
+}
+.main-model-btn {
+    display: flex;
+    align-items: baseline;
+    gap: 5px;
+    padding: 5px 14px;
+    border: none;
+    border-radius: 999px;
+    background: transparent;
+    color: rgba(255, 255, 255, 0.72);
+    cursor: pointer;
+    font-size: 13px;
+    transition: background .15s, color .15s;
+}
+.main-model-btn .main-model-res { font-size: 11px; opacity: .7; }
+.main-model-btn.active {
+    background: #6d5efc;
+    color: #fff;
+}
+.main-model-btn:not(.active):hover { color: #fff; background: rgba(255,255,255,.08); }
+
+.weather-map-container.light .main-model-switch {
+    background: rgba(255, 255, 255, 0.9);
+    border-color: rgba(0, 0, 0, 0.08);
+}
+.weather-map-container.light .main-model-btn { color: #444; }
+.weather-map-container.light .main-model-btn.active { color: #fff; }

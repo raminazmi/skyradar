@@ -36,10 +36,8 @@ function clamp(value: number, min: number, max: number) {
 
 export function TimeSlider({ times, currentTimeIndex, isPlaying }: TimeSliderProps) {
     const {
-        playbackSpeed,
         setCurrentTimeIndex,
         setIsPlaying,
-        setPlaybackSpeed,
     } = useWeatherStore();
     const sliderRef = useRef<HTMLDivElement>(null);
 
@@ -90,19 +88,6 @@ export function TimeSlider({ times, currentTimeIndex, isPlaying }: TimeSliderPro
             </div>
 
             <div className="zoom-time-controller">
-                <div className="zoom-time-speed">
-                    {[1, 2, 4].map((speed) => (
-                        <button
-                            key={speed}
-                            className={`zoom-speed-btn ${playbackSpeed === speed ? 'active' : ''}`}
-                            onClick={() => setPlaybackSpeed(speed)}
-                            type="button"
-                        >
-                            {speed}x
-                        </button>
-                    ))}
-                </div>
-
                 <div className="zoom-time-card">
                     <button
                         className="time-nav-btn"

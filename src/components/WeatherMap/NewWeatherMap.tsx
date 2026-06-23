@@ -13,6 +13,7 @@ import 'maplibre-gl/dist/maplibre-gl.css';
 import { LayerSidebar }     from './LayerSidebar';
 import { TimeSlider }       from './TimeSlider';
 import { WeatherInfoPanel } from './WeatherInfoPanel';
+import { ModelSwitch } from './ModelSwitch';
 import { LayerControls }    from './LayerControls';
 import { SettingsPanel }    from './SettingsPanel';
 import { HeatmapWebGLLayer }   from './HeatmapWebGLLayer';
@@ -292,6 +293,9 @@ export function NewWeatherMap() {
                                 : 'لم يتم تحديد موقع'}
                         </span>
                     </div>
+
+                    {/* مبدّل النموذج (GFS/ECMWF) ظاهر دائماً على الصفحة الرئيسية — أسلوب Zoom Earth */}
+                    <ModelSwitch />
 
                     {/* شريط الوقت — مستقلّ عن Open-Meteo: محوره ساعات توقّع GFS (نُسج النسيج) */}
                     <TimeSlider
