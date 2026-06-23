@@ -274,12 +274,15 @@ export class ParticleGLLayer implements CustomLayerInterface {
         // MapLibre v5: نستخدم mainMatrix لإحداثيات MercatorCoordinate [0..1] (وليس modelViewProjectionMatrix).
         gl.uniformMatrix4fv(this.drawLoc.uniforms.u_matrix, false, new Float32Array(options.defaultProjectionData.mainMatrix as ArrayLike<number>));
         gl.uniform4f(this.drawLoc.uniforms.u_bounds, b.west, b.south, b.east, b.north);
-        // حجم أكبر قليلاً (كان 2.1) لتبدو الجسيمات أوضح وأجمل دون مبالغة
-        gl.uniform1f(this.drawLoc.uniforms.u_point_size, 3.2);
-        gl.uniform1f(this.drawLoc.uniforms.u_alpha, this.settings.opacity);
-        // أبيض في الوضع الداكن، أزرق داكن مائل للرمادي في الفاتح (يظهر بوضوح فوق خريطة فاتحة)
+        // على القاعدة الفاتحة (حرارة/ضغط/…) نكبّر الحجم ونرفع الشفافية ونغمّق اللون
+        // ليظهر تباين الجسيمات بوضوح فوق الألوان الفاتحة (كان يكاد يختفي).
+        const lightBase = !this.darkMode;
+        gl.uniform1f(this.drawLoc.uniforms.u_point_size, lightBase ? 3.9 : 3.2);
+        gl.uniform1f(this.drawLoc.uniforms.u_alpha,
+            lightBase ? Math.min(1.0, this.settings.opacity * 1.4) : this.settings.opacity);
+        // أبيض في الوضع الداكن، أسود مزرقّ شبه معتم في الفاتح (تباين عالٍ).
         if (this.darkMode) gl.uniform3f(this.drawLoc.uniforms.u_color, 1.0, 1.0, 1.0);
-        else gl.uniform3f(this.drawLoc.uniforms.u_color, 0.13, 0.18, 0.28);
+        else gl.uniform3f(this.drawLoc.uniforms.u_color, 0.04, 0.06, 0.10);
 
         gl.drawArrays(gl.POINTS, 0, this.numDrawn);
     }

@@ -11,7 +11,7 @@ import type { Map as MaplibreMap } from 'maplibre-gl';
  * ألوانها بأعلى دقّة. الحرارة/الإحساس/الندى/الرطوبة على قاعدة فاتحة (فستقية)، أما
  * الرياح/الهبّات/الأمطار/الغيوم/الضغط فعلى قاعدة داكنة لتبرز ألوانها الزاهية.
  */
-const LIGHT_BASE_LAYERS = new Set(['temperature', 'feels-like', 'dewpoint', 'humidity']);
+const LIGHT_BASE_LAYERS = new Set(['temperature', 'feels-like', 'dewpoint', 'humidity', 'pressure']);
 
 /** هل قاعدة خريطة الطبقة الفعّالة داكنة؟ (لا طبقة فعّالة → الثيم العام). */
 export function layerBaseIsDark(activeLayer: string | null | undefined, fallbackDark: boolean): boolean {
