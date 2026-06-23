@@ -28,7 +28,11 @@ if os.name == 'nt':
         pass
 
 import numpy as np
-import cfgrib
+# cfgrib الحديث (>=0.9.11) أزال open_dataset؛ نستخدم xarray مع محرّك cfgrib (يبقى ds[name].values).
+import xarray as xr
+
+def _open_grib(path):
+    return xr.open_dataset(path, engine='cfgrib', backend_kwargs={'indexpath': ''})
 
 # مجال القيم لكل متغيّر — مطابق تماماً لـ VALUE_RANGES في الواجهة، والإزاحة لتحويل الوحدة.
 VAR_CONFIG = {
@@ -139,7 +143,7 @@ def generate_wind(hour, out_path):
     url, label = wind_url(hour)
     tmp = os.path.join(tempfile.gettempdir(), f"gfs_wind_{hour:03d}.grb2")
     urllib.request.urlretrieve(url, tmp)
-    ds = cfgrib.open_dataset(tmp, backend_kwargs={'indexpath': ''})
+    ds = _open_grib(tmp)
     u = np.asarray(ds['u10'].values, dtype=np.float64) * 3.6   # m/s → km/h
     v = np.asarray(ds['v10'].values, dtype=np.float64) * 3.6
 
@@ -163,7 +167,7 @@ def generate_one(cfg, var, hour, out_path):
     tmp = os.path.join(tempfile.gettempdir(), f"gfs_{var}_{hour:03d}.grb2")
     urllib.request.urlretrieve(url, tmp)
 
-    ds = cfgrib.open_dataset(tmp, backend_kwargs={'indexpath': ''})
+    ds = _open_grib(tmp)
     vname = list(ds.data_vars)[0]
     arr = np.asarray(ds[vname].values, dtype=np.float64)        # (lat 90..-90, lon 0..360)
 
