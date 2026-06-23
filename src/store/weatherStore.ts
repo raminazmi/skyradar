@@ -19,26 +19,16 @@ export const useWeatherStore = create<WeatherState>((set) => ({
     zoomLevel: 4,
     setZoomLevel: (zoom) => set({ zoomLevel: zoom }),
 
+    // نموذجان عالميان لهما raster مُولَّد على السيرفر (GFS من NOAA، ECMWF IFS من open data).
+    // ICON أُزيل: شبكته icosahedral تحتاج إعادة تشبيك غير عملية على الاستضافة المشتركة.
     availableModels: [
-        { id: 'GFS', name: 'GFS', resolution: '25 كم' }, // Fallback initial
-        { id: 'ICON', name: 'ICON', resolution: '13 كم' }
+        { id: 'GFS', name: 'GFS', resolution: '25 كم' },
+        { id: 'ECMWF', name: 'ECMWF', resolution: '28 كم' },
     ],
     selectedModel: 'GFS',
     setSelectedModel: (model) => set({ selectedModel: model }),
     initializeModels: async () => {
-        try {
-            const { weatherService } = await import('../services/weatherService');
-            const models = await weatherService.getAvailableModels();
-            // Map backend resolution to frontend display format if needed
-            const formattedModels = models.map((m: any) => ({
-                id: m.name as 'GFS' | 'ICON',
-                name: m.name,
-                resolution: m.resolution.includes('~') ? m.resolution.split('~')[1].replace(')', '') : m.resolution
-            }));
-            set({ availableModels: formattedModels });
-        } catch (error) {
-            console.error('Failed to initialize models:', error);
-        }
+        // القائمة ثابتة (raster-only): لا نعتمد على قائمة الخادم كي لا يعود ICON.
     },
 
     visibleLayers: {

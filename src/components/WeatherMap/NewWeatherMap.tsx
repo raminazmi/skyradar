@@ -84,13 +84,15 @@ export function NewWeatherMap() {
         return heatmapTypes.find((t) => visibleLayers[t]) ?? null;
     }, [visibleLayers]);
 
-    // حقل الرياح من نسيج GFS المحلّي (R=سرعة، G/B=U/V) — يغذّي الجسيمات وطبقة لون الرياح
-    // وتلميح الرياح بلا Open-Meteo.
-    const windGrid = useWindRaster(currentTimeIndex);
+    // نُسج خام متاحة لكِلا النموذجين: GFS (NOAA) في rasters/، و ECMWF (IFS) في rasters/ecmwf/.
+    // التبديل يغيّر مجلّد النسيج فعلياً → بيانات نموذج مختلف، بلا أي طلبات Open-Meteo (لا 429).
+    const rasterDir = selectedModel === 'ECMWF' ? 'rasters/ecmwf/' : 'rasters/';
+    const useRaster = !!activeHeatmapType && RASTER_TYPES.has(activeHeatmapType)
+        && (selectedModel === 'GFS' || selectedModel === 'ECMWF');
 
-    // نُسج GFS الخام متاحة لنموذج GFS فقط؛ عند اختيار ICON نعود لمسار البلاطات (Open-Meteo
-    // يخدم ICON) فتتغيّر بيانات الخريطة فعلياً مع المبدّل. (نُسج ICON من DWD لاحقاً.)
-    const useRaster = !!activeHeatmapType && RASTER_TYPES.has(activeHeatmapType) && selectedModel === 'GFS';
+    // حقل الرياح من النسيج المحلّي (R=سرعة، G/B=U/V) — يغذّي الجسيمات وطبقة لون الرياح
+    // وتلميح الرياح بلا Open-Meteo، ويتبع مجلّد النموذج المختار.
+    const windGrid = useWindRaster(currentTimeIndex, rasterDir);
 
     // بلاطات الطبقة العددية الفعّالة (لغير طبقات النسيج) — تُجلب وتُعرض مربّعاً مربّعاً.
     const scalarTiles = useTiledHeatmap({
@@ -119,12 +121,13 @@ export function NewWeatherMap() {
     const [rasterMeta, setRasterMeta] = useState<{ run_epoch: number; hours: number } | null>(null);
     useEffect(() => {
         let cancelled = false;
-        fetch(`${import.meta.env.BASE_URL}rasters/meta.json`, { cache: 'no-store' })
+        setRasterMeta(null);
+        fetch(`${import.meta.env.BASE_URL}${rasterDir}meta.json`, { cache: 'no-store' })
             .then((r) => (r.ok ? r.json() : null))
             .then((m) => { if (!cancelled && m && m.run_epoch) setRasterMeta(m); })
             .catch(() => { /* بلا meta: نسقط على السلوك الافتراضي (إزاحة 0) */ });
         return () => { cancelled = true; };
-    }, []);
+    }, [rasterDir]);
 
     // زمن صلاحية الإطار i = زمن الدورة + i ساعة. بلا meta: نبدأ من الساعة الحالية.
     const runEpoch = rasterMeta?.run_epoch ?? Math.floor(Date.now() / 3_600_000) * 3600;
@@ -216,7 +219,7 @@ export function NewWeatherMap() {
                         {activeHeatmapType && useRaster && (
                             <RasterHeatmapWebGLLayer
                                 id="weather-heatmap-scalar"
-                                url={`${import.meta.env.BASE_URL}rasters/${activeHeatmapType}_${String(currentTimeIndex).padStart(3, '0')}.png`}
+                                url={`${import.meta.env.BASE_URL}${rasterDir}${activeHeatmapType}_${String(currentTimeIndex).padStart(3, '0')}.png`}
                                 type={activeHeatmapType}
                                 opacity={0.92}
                             />

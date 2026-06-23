@@ -6,7 +6,7 @@ export function ModelSelector() {
 
     const models = [
         { id: 'GFS' as const, name: 'GFS', provider: 'NOAA الأمريكية', color: '#2196F3' },
-        { id: 'ICON' as const, name: 'ICON', provider: 'DWD الألمانية', color: '#4CAF50' }
+        { id: 'ECMWF' as const, name: 'ECMWF', provider: 'ECMWF الأوروبية', color: '#4CAF50' }
     ];
 
     return (

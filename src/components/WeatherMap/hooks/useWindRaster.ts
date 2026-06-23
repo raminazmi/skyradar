@@ -13,7 +13,7 @@ const UV_MAX = 60;          // يطابق WIND_UV_MAX في weatherTextures.ts / 
 const GRID_W = 360;
 const GRID_H = 181;
 
-export function useWindRaster(timeIndex: number): WeatherGrid | null {
+export function useWindRaster(timeIndex: number, dir = 'rasters/'): WeatherGrid | null {
     const [grid, setGrid] = useState<WeatherGrid | null>(null);
 
     useEffect(() => {
@@ -52,9 +52,9 @@ export function useWindRaster(timeIndex: number): WeatherGrid | null {
             });
         };
         img.onerror = () => { /* الساعة غير مولَّدة — نُبقي آخر شبكة */ };
-        img.src = `${import.meta.env.BASE_URL}rasters/wind_${String(timeIndex).padStart(3, '0')}.png`;
+        img.src = `${import.meta.env.BASE_URL}${dir}wind_${String(timeIndex).padStart(3, '0')}.png`;
         return () => { cancelled = true; };
-    }, [timeIndex]);
+    }, [timeIndex, dir]);
 
     return grid;
 }

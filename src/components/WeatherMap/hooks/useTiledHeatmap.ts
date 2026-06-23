@@ -34,7 +34,7 @@ export function useTiledHeatmap({ mapBounds, mapZoom, selectedModel, currentTime
         if (!mapBounds || !activeType) { setReady([]); return; }
 
         const id = ++reqRef.current;
-        const model = selectedModel as 'GFS' | 'ICON';
+        const model = selectedModel as 'GFS' | 'ECMWF';
         const tiles = getVisibleTiles(mapBounds, mapZoom);
         const dataKey = (tileKey: string) => `${activeType}_${model}_${currentTimeIndex}_${tileKey}`;
         const visibleKeys = new Set(tiles.map((t) => t.key));

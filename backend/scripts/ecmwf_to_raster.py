@@ -11,7 +11,7 @@ ECMWF open data بدقّة زمنية كل 3 ساعات؛ نطابق كل مؤش
 الاستخدام:
   python ecmwf_to_raster.py --vars temperature,wind --hours 0-24 --outdir ../public/rasters/ecmwf
 """
-import os, sys, time, argparse, tempfile
+import os, sys, time, json, datetime, argparse, tempfile
 import numpy as np
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -127,8 +127,24 @@ def main():
             except Exception as e:
                 fail += 1
                 print(f"  ✗ {var} f{h:03d}: {e!r}", flush=True)
+    _write_meta(args.outdir, hours)
     print(f"== اكتمل (ECMWF): {ok} نسيج، {fail} فشل، في {round(time.time()-t0,1)}ث ==", flush=True)
     return 1 if ok == 0 else 0
+
+
+def _write_meta(outdir, hours):
+    """meta.json بزمن دورة ECMWF — تستخدمه الواجهة لمحاذاة الإطار مع الزمن الحقيقي."""
+    try:
+        dt = CLIENT.latest(type="fc", param="2t")           # datetime آخر دورة متاحة (UTC)
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=datetime.timezone.utc)
+        run_epoch = int(dt.timestamp())
+    except Exception:
+        run_epoch = int(datetime.datetime.now(datetime.timezone.utc).timestamp())
+    meta = {'run_epoch': run_epoch, 'hours': max(hours) + 1, 'generated_epoch': int(time.time())}
+    with open(os.path.join(outdir, 'meta.json'), 'w') as f:
+        json.dump(meta, f)
+    print(f"meta.json: run_epoch={run_epoch} hours={meta['hours']}", flush=True)
 
 
 if __name__ == '__main__':
