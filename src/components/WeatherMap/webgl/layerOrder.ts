@@ -98,7 +98,7 @@ export function applyHillshadeTheme(map: MaplibreMap, darkMode: boolean): void {
  * (طرق/حدود/سواحل) والتسميات معتمة وواضحة فوق الجميع.
  * تعمل عبر setPaintProperty على طبقات الأرض/الماء/المباني الشائعة (آمنة: تتجاهل المفقود).
  */
-export function styleWeatherBase(map: MaplibreMap, darkMode: boolean): void {
+export function styleWeatherBase(map: MaplibreMap, darkMode: boolean, activeLayer?: string | null): void {
     // نتحقّق من وجود الطبقة فعلياً قبل التلوين — أنماط مختلفة (CARTO وغيرها) تسمّي
     // طبقات اليابسة/الماء بأسماء مختلفة، وSetPaintProperty على طبقة غير موجودة
     // لا يرمي خطأً بل يُصدر حدث 'error' يُسجَّل في الكونسول (ضوضاء بلا فائدة).
@@ -110,9 +110,12 @@ export function styleWeatherBase(map: MaplibreMap, darkMode: boolean): void {
     // تمتزج فوق هذه القاعدة فتظهر غنيّة ودقيقة (فوق الأبيض كانت تبهت). الماء بأزرق فاتح خفيف.
     // قاعدة فستقية مُوحَّدة (يابسة + بحر + خلفية) في الوضع الفاتح كـ Zoom Earth — فحيث لم
     // تصل بلاطات الحرارة بعد، تبقى الخريطة فستقية لا زرقاء/داكنة. الداكن للرياح/الأمطار.
-    const land  = darkMode ? '#20242a' : '#cedb9c';
-    const water = darkMode ? '#161b22' : '#cedb9c';
-    const bg    = darkMode ? '#0e1116' : '#cedb9c';
+    // القاعدة الفاتحة فستقية افتراضياً؛ لطبقة الضغط نستخدم رمادياً فاتحاً (محايد) لإبراز
+    // تدرّجات الضغط دون ميل أخضر.
+    const lightTone = activeLayer === 'pressure' ? '#e8e6e2' : '#cedb9c';
+    const land  = darkMode ? '#20242a' : lightTone;
+    const water = darkMode ? '#161b22' : lightTone;
+    const bg    = darkMode ? '#0e1116' : lightTone;
 
     set('background', 'background-color', bg);
     // ملاحظة مهمة (مطابقة Zoom Earth): طبقة الطقس مُدرَجة أسفل مضلّعات اليابسة/الماء.

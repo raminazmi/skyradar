@@ -154,7 +154,7 @@ export function NewWeatherMap() {
     const mapBaseDark = layerBaseIsDark(activeLayerKey, darkMode);
 
     const { handleMapLoad, handleMoveEnd } = useMapStyling({
-        mapRef, darkMode: mapBaseDark, setMapBounds, setZoomLevel,
+        mapRef, darkMode: mapBaseDark, activeLayerKey, setMapBounds, setZoomLevel,
     });
 
     const handleMapClick = (e: MapLayerMouseEvent) => {

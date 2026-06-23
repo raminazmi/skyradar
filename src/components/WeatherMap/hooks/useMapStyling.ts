@@ -16,6 +16,8 @@ import type { GridBounds } from '../utils/gridBounds';
 interface Params {
     mapRef: React.RefObject<MapRef | null>;
     darkMode: boolean;
+    /** الطبقة الفعّالة — تحدّد لون القاعدة الفاتحة (الضغط = رمادي بدل الفستقي). */
+    activeLayerKey?: string | null;
     setMapBounds: (b: GridBounds) => void;
     setZoomLevel: (z: number) => void;
 }
@@ -27,7 +29,7 @@ function applyMinZoom(map: MaplibreMap): void {
     map.setMinZoom(Math.max(0, minZoom));
 }
 
-export function useMapStyling({ mapRef, darkMode, setMapBounds, setZoomLevel }: Params) {
+export function useMapStyling({ mapRef, darkMode, activeLayerKey, setMapBounds, setZoomLevel }: Params) {
     const initedRef = useRef(false);
 
     const handleMapLoad = useCallback(() => {
@@ -41,7 +43,7 @@ export function useMapStyling({ mapRef, darkMode, setMapBounds, setZoomLevel }: 
         // كل خطوة في حارس مستقل: فشل واحدة (مثلاً التضاريس) يجب ألّا يُلغي البقية —
         // وإلّا تبقى الأسماء الإنجليزية ظاهرة وتختفي السواحل/التفاصيل.
         const step = (fn: () => void) => { try { fn(); } catch { /* تجاهل */ } };
-        step(() => styleWeatherBase(gl, darkMode));
+        step(() => styleWeatherBase(gl, darkMode, activeLayerKey));
         step(() => liftAdminBordersAboveBase(gl));
         step(() => addHillshadeTerrain(gl, darkMode));
         step(() => hideBaseMapLabels(gl));
@@ -84,13 +86,13 @@ export function useMapStyling({ mapRef, darkMode, setMapBounds, setZoomLevel }: 
         if (!map) return;
         try {
             const gl = map.getMap();
-            styleWeatherBase(gl, darkMode);
+            styleWeatherBase(gl, darkMode, activeLayerKey);
             hideBaseMapLabels(gl);          // إبقاء الأسماء الإنجليزية مخفيّة بعد تبديل الثيم
             styleAdminBorders(gl, darkMode);
             addContinentCoastline(gl, darkMode);
             applyHillshadeTheme(gl, darkMode);
         } catch { /* تجاهل */ }
-    }, [darkMode, mapRef]);
+    }, [darkMode, activeLayerKey, mapRef]);
 
     // إعادة حساب أدنى زووم عند تغيير حجم النافذة
     useEffect(() => {
