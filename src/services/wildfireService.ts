@@ -66,7 +66,9 @@ export async function getWildfiresForBounds(bounds: {
 }): Promise<WildfireHotspot[]> {
     const response = await axios.get(`${apiBaseUrl}/wildfires/region`, {
         params: { ...bounds, limit: 500 },
-        timeout: 7000,
+        // النداء الأول لـ NASA FIRMS قد يتجاوز 7 ثوانٍ قبل التخزين المؤقت؛
+        // نطابق مهلة الـ backend (15 ثانية) لتفادي timeout مبكر.
+        timeout: 15000,
     });
 
     const fires = Array.isArray(response.data?.fires) ? response.data.fires : [];
