@@ -58,7 +58,7 @@ export function LegendBar() {
             <div className="legend-model-info">
                 <span className="model-indicator">
                     <span className={`model-dot-indicator ${selectedModel.toLowerCase()}`}></span>
-                    {selectedModel} {selectedModel === 'GFS' ? '25 كم' : '13 كم'}
+                    {selectedModel} {selectedModel === 'GFS' ? '22 كم' : '9 كم'}
                 </span>
             </div>
         </div>

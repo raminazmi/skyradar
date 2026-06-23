@@ -281,19 +281,6 @@ export function WeatherInfoPanel({ weatherData, currentTimeIndex, location }: We
                     </Fragment>
                 ))}
             </div>
-
-            <div className="weather-panel-footer">
-                {availableModels.map((model) => (
-                    <button
-                        key={model.id}
-                        className={`weather-panel-model ${selectedModel === model.id ? 'active' : ''}`}
-                        onClick={() => setSelectedModel(model.id)}
-                        type="button"
-                    >
-                        {model.name} {model.resolution}
-                    </button>
-                ))}
-            </div>
         </div>
     );
 }

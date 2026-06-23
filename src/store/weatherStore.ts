@@ -22,8 +22,8 @@ export const useWeatherStore = create<WeatherState>((set) => ({
     // نموذجان عالميان لهما raster مُولَّد على السيرفر (GFS من NOAA، ECMWF IFS من open data).
     // ICON أُزيل: شبكته icosahedral تحتاج إعادة تشبيك غير عملية على الاستضافة المشتركة.
     availableModels: [
-        { id: 'GFS', name: 'GFS', resolution: '25 كم' },
-        { id: 'ECMWF', name: 'ECMWF', resolution: '28 كم' },
+        { id: 'GFS', name: 'GFS', resolution: '22 كم' },
+        { id: 'ECMWF', name: 'ECMWF', resolution: '9 كم' },
     ],
     selectedModel: 'GFS',
     setSelectedModel: (model) => set({ selectedModel: model }),

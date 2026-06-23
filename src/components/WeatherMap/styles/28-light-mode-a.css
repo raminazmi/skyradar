@@ -4,7 +4,7 @@
 
 /* ── متغيرات اللون الأساسية ── */
 .weather-map-container.light {
-    --panel-bg:       rgba(255, 255, 255, 0.93);
+    --panel-bg:       #ffffff;
     --panel-border:   rgba(0, 0, 0, 0.10);
     --panel-shadow:   0 8px 32px rgba(0, 0, 0, 0.12);
     --text-primary:   #0f172a;
@@ -13,7 +13,7 @@
     --row-hover:      rgba(0, 0, 0, 0.04);
     --row-active:     rgba(0, 0, 0, 0.08);
     --divider:        rgba(0, 0, 0, 0.07);
-    --stat-bg:        rgba(0, 0, 0, 0.04);
+    --stat-bg:        #ffffff;
 }
 
 /* ── Weather Info Panel ── */

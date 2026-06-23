@@ -42,7 +42,6 @@
 
 /* ── Right Toolbar ── */
 .weather-map-container.light .right-toolbar {
-    background: var(--panel-bg);
     border-color: var(--panel-border);
     box-shadow: var(--panel-shadow);
 }
@@ -70,7 +69,7 @@
 
 /* ── Layer Sidebar ── */
 .weather-map-container.light .layer-sidebar {
-    background: rgba(255, 255, 255, 0.97);
+    background: #ffffff;
     border-color: var(--panel-border);
     color: var(--text-primary);
 }
@@ -135,7 +134,7 @@
 /* ── Settings Panel ── */
 .weather-map-container.light .settings-panel,
 .weather-map-container.light .settings-overlay + .settings-panel {
-    background: rgba(255, 255, 255, 0.97);
+    background: #ffffff;
     border-color: var(--panel-border);
     color: var(--text-primary);
 }
@@ -184,7 +183,7 @@
 
 /* ── Info overlay (عن راصد) ── */
 .weather-map-container.light .info-panel-content {
-    background: rgba(255, 255, 255, 0.97);
+    background: #ffffff;
     border-color: var(--panel-border);
     color: var(--text-primary);
 }
@@ -203,7 +202,7 @@
 
 /* ── Layer Status Panel ── */
 .weather-map-container.light .layer-status-panel {
-    background: rgba(255, 255, 255, 0.92);
+    background: #ffffff;
     border-color: var(--panel-border);
     box-shadow: var(--panel-shadow);
     color: var(--text-primary);

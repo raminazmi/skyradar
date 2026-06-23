@@ -164,7 +164,7 @@ export function RightToolbar() {
 
     return (
         <>
-            <div className="right-toolbar">
+            <div className="right-toolbar  z-[1000]">
                 <button className="toolbar-btn" onClick={handleSearchToggle} title="بحث"><FiSearch /></button>
                 <button className="toolbar-btn" onClick={handleLocate} title="موقعي"><FiCrosshair /></button>
                 <div className="toolbar-divider tb-secondary" />
