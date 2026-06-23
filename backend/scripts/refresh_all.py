@@ -26,8 +26,9 @@ import gfs_to_raster as g
 # مجلّد المخرجات الافتراضي: public/rasters الأمامي (ما يقرأه التطبيق فعلياً).
 DEFAULT_OUTDIR = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..', 'public', 'rasters'))
 
-# كل المتغيّرات المدعومة (السبعة السلَّمية + الرياح U/V).
-ALL_VARS = list(g.VAR_CONFIG) + ['wind']
+# المتغيّرات التي تستخدمها الواجهة فعلاً (RASTER_TYPES) + الرياح U/V.
+# نستبعد feels-like: غير متاح عبر فلتر NOMADS ولا تستهلكه الواجهة كـ raster.
+ALL_VARS = [v for v in g.VAR_CONFIG if v != 'feels-like'] + ['wind']
 
 
 def refresh(vars_list, hours, outdir):
