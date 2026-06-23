@@ -252,3 +252,38 @@
 }
 .weather-map-container.light .main-model-btn { color: #444; }
 .weather-map-container.light .main-model-btn.active { color: #fff; }
+
+/* زرّ تبديل جسيمات الرياح — عائم أسفل اليسار، أسلوب Zoom Earth */
+.particle-toggle {
+    position: absolute;
+    bottom: 20px;
+    left: 16px;
+    z-index: 600;
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    padding: 8px 14px;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 999px;
+    background: rgba(20, 24, 31, 0.72);
+    color: rgba(255, 255, 255, 0.7);
+    font-size: 13px;
+    cursor: pointer;
+    backdrop-filter: blur(8px);
+    transition: background .15s, color .15s, border-color .15s;
+}
+.particle-toggle svg { width: 16px; height: 16px; }
+.particle-toggle.active { background: #6d5efc; border-color: #6d5efc; color: #fff; }
+.particle-toggle:not(.active):hover { color: #fff; background: rgba(255,255,255,.1); }
+
+.weather-map-container.light .particle-toggle {
+    background: rgba(255, 255, 255, 0.9);
+    border-color: rgba(0, 0, 0, 0.08);
+    color: #444;
+}
+.weather-map-container.light .particle-toggle.active { background: #6d5efc; color: #fff; }
+
+@media (max-width: 560px) {
+    .particle-toggle span { display: none; }
+    .particle-toggle { padding: 9px; }
+}

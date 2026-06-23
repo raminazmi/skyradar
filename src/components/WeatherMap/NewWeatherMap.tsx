@@ -14,6 +14,7 @@ import { LayerSidebar }     from './LayerSidebar';
 import { TimeSlider }       from './TimeSlider';
 import { WeatherInfoPanel } from './WeatherInfoPanel';
 import { ModelSwitch } from './ModelSwitch';
+import { ParticleToggle } from './ParticleToggle';
 import { LayerControls }    from './LayerControls';
 import { SettingsPanel }    from './SettingsPanel';
 import { HeatmapWebGLLayer }   from './HeatmapWebGLLayer';
@@ -295,6 +296,9 @@ export function NewWeatherMap() {
                                 : 'لم يتم تحديد موقع'}
                         </span>
                     </div>
+
+                    {/* زرّ سريع لتبديل جسيمات الرياح للطبقة الفعّالة — أسلوب Zoom Earth */}
+                    <ParticleToggle activeLayerKey={activeLayerKey} />
 
                     {/* مبدّل النموذج (GFS/ECMWF) ظاهر دائماً على الصفحة الرئيسية — أسلوب Zoom Earth */}
                     <ModelSwitch />
