@@ -209,10 +209,14 @@
 
 /* مبدّل النموذج على الصفحة الرئيسية (GFS/ECMWF) — أسلوب Zoom Earth، فوق شريط الوقت */
 .main-model-switch {
+    position: absolute;
+    bottom: 104px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 600;
     display: flex;
     gap: 6px;
     justify-content: center;
-    margin: 0 auto 8px;
     padding: 4px;
     width: fit-content;
     background: rgba(20, 24, 31, 0.72);

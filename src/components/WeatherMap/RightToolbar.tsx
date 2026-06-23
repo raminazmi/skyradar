@@ -184,7 +184,7 @@ export function RightToolbar() {
             </div>
 
             {showSearch && (
-                <div className="search-panel">
+                <div className="search-panel z-[99999]">
                     <div className="search-input-wrap">
                         <FiSearch className="search-icon" />
                         <input
