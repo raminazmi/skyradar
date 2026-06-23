@@ -27,6 +27,7 @@ SCALAR = {
     'dewpoint':    dict(param='2d',  offset=-273.15, scale=1.0,  vmin=-35, vmax=35),
     'pressure':    dict(param='msl', offset=0.0,     scale=0.01, vmin=955, vmax=1050),
     'clouds':      dict(param='tcc', offset=0.0,     scale=100.0, vmin=0,  vmax=100),  # 0..1 → %
+    'wind-gusts':  dict(param='10fg', offset=0.0,    scale=3.6,   vmin=0,  vmax=160),  # m/s → km/h
 }
 # humidity تُشتقّ من 2t/2d؛ precipitation من tp التراكمي؛ wind من 10u/10v.
 ALL_VARS = list(SCALAR) + ['humidity', 'precipitation', 'wind']

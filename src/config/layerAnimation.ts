@@ -59,9 +59,9 @@ export interface LayerPresentationConfig {
 /**
  * طبقة scalar بدون حركة افتراضية، لكن مع خيار advection اختياري
  */
-// ملاحظة (مطابقة Zoom Earth): الطبقات العددية (حرارة/أمطار/…) تُعرض كحقل لوني نظيف
-// بلا جسيمات افتراضياً — الجسيمات حكرٌ على طبقة الرياح. تبقى قابلة للتفعيل يدوياً من الإعدادات.
-function scalarLayer(advectionSpeed = 0.38, desc: string, defaultParticles = false): LayerPresentationConfig {
+// مطابقة Zoom Earth: كل الطبقات العددية (حرارة/أمطار/ضغط/…) تعرض جسيمات الرياح البيضاء
+// فوق الحقل اللوني افتراضياً. تبقى قابلة للإطفاء يدوياً من الإعدادات لكل طبقة.
+function scalarLayer(advectionSpeed = 0.38, desc: string, defaultParticles = true): LayerPresentationConfig {
     return {
         display: 'heatmap',
         motion: 'wind-advection',
