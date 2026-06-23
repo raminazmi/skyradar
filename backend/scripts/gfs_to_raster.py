@@ -12,14 +12,20 @@ gfs_to_raster.py
 """
 import os, sys, struct, zlib, argparse, datetime, tempfile, urllib.request
 
-# ── جسر تحميل مكتبة eccodes المضمّنة في ecmwflibs (Windows / Python 3.14) ──────────
+# ── جسر تحميل مكتبة eccodes المضمّنة في ecmwflibs ─────────────────────────────────
+# على ويندوز نحتاج add_dll_directory + توجيه findlibs إلى eccodes.dll.
+# على Linux (السيرفر) تُحمَّل eccodes.so تلقائياً عبر ecmwflibs؛ add_dll_directory غير موجود.
 import ecmwflibs
 _ED = os.path.dirname(ecmwflibs.__file__)
-os.add_dll_directory(_ED)
-os.environ["PATH"] = _ED + os.pathsep + os.environ.get("PATH", "")
-import findlibs
-_orig_find = findlibs.find
-findlibs.find = lambda name, *a, **k: (os.path.join(_ED, "eccodes.dll") if name == "eccodes" else _orig_find(name, *a, **k))
+if os.name == 'nt':
+    os.add_dll_directory(_ED)
+    os.environ["PATH"] = _ED + os.pathsep + os.environ.get("PATH", "")
+    try:
+        import findlibs
+        _orig_find = findlibs.find
+        findlibs.find = lambda name, *a, **k: (os.path.join(_ED, "eccodes.dll") if name == "eccodes" else _orig_find(name, *a, **k))
+    except Exception:
+        pass
 
 import numpy as np
 import cfgrib

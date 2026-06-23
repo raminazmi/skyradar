@@ -1,0 +1,6 @@
+# اعتماديات توليد نُسج الطقس (rasters) من GFS.
+# على السيرفر: pip install -r backend/scripts/requirements.txt
+numpy
+cfgrib
+ecmwflibs
+findlibs
