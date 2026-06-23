@@ -127,6 +127,8 @@ export interface WeatherState {
     setInfoPanelOpen: (open: boolean) => void;
     settingsOpen: boolean;
     setSettingsOpen: (open: boolean) => void;
+    searchOpen: boolean;
+    setSearchOpen: (open: boolean) => void;
     legendOpen: boolean;
     setLegendOpen: (open: boolean) => void;
 

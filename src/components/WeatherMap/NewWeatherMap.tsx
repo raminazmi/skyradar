@@ -61,7 +61,7 @@ export function NewWeatherMap() {
     const {
         currentLocation, selectedModel, visibleLayers, darkMode,
         weatherData, currentTimeIndex, isPlaying, playbackSpeed,
-        settingsOpen, setSettingsOpen,
+        settingsOpen, setSettingsOpen, searchOpen,
         infoPanelOpen, layerControlsOpen, sidebarOpen,
         mapBounds, zoomLevel,
         setCurrentLocation, setInfoPanelOpen, setCurrentTimeIndex,
@@ -179,7 +179,8 @@ export function NewWeatherMap() {
             >
                 <LayerSidebar />
 
-                {/* شعار عائم فوق الخريطة — بدون هيدر */}
+                {/* شعار عائم فوق الخريطة — يُخفى عند فتح البحث كي لا يغطّيه */}
+                {!searchOpen && (
                 <div
                     className={` ${darkMode ? 'bg-[#0d1117]' : 'bg-white' } fixed top-[14px] right-16 left-auto z-[950] py-2 px-3 flex items-center [direction:ltr]  rounded-xl shadow-[0_2px_16px_rgba(0,0,0,0.25)] pointer-events-none select-none whitespace-nowrap max-md:hidden`}
                     aria-label="Sky Radar"
@@ -190,6 +191,7 @@ export function NewWeatherMap() {
                         className="h-[35px] w-auto shrink-0 block"
                     />
                 </div>
+                )}
 
                 <div className="map-wrapper">
                     <Map

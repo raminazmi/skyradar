@@ -35,9 +35,12 @@ export function RightToolbar() {
         setInfoPanelOpen,
         setSettingsOpen,
         setDarkMode,
+        setSearchOpen,
     } = useWeatherStore();
 
     const [showSearch, setShowSearch]       = useState(false);
+    // نعكس حالة البحث للمتجر كي يخفي الشعار الذي يغطّيها (سياق تكديس منفصل)
+    useEffect(() => { setSearchOpen(showSearch); }, [showSearch, setSearchOpen]);
     const [showInfo, setShowInfo]           = useState(false);
     const [showShare, setShowShare]         = useState(false);
     const [searchQuery, setSearchQuery]     = useState('');

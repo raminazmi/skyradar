@@ -123,6 +123,8 @@ export const useWeatherStore = create<WeatherState>((set) => ({
     setInfoPanelOpen: (open) => set(open ? getResponsivePanelPatch('infoPanelOpen') : { infoPanelOpen: false }),
     settingsOpen: false,
     setSettingsOpen: (open) => set(open ? getResponsivePanelPatch('settingsOpen') : { settingsOpen: false }),
+    searchOpen: false,
+    setSearchOpen: (open) => set({ searchOpen: open }),
     legendOpen: true,
     setLegendOpen: (open) => set({ legendOpen: open }),
 
