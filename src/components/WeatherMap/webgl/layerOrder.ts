@@ -110,12 +110,17 @@ export function styleWeatherBase(map: MaplibreMap, darkMode: boolean, activeLaye
     // تمتزج فوق هذه القاعدة فتظهر غنيّة ودقيقة (فوق الأبيض كانت تبهت). الماء بأزرق فاتح خفيف.
     // قاعدة فستقية مُوحَّدة (يابسة + بحر + خلفية) في الوضع الفاتح كـ Zoom Earth — فحيث لم
     // تصل بلاطات الحرارة بعد، تبقى الخريطة فستقية لا زرقاء/داكنة. الداكن للرياح/الأمطار.
-    // القاعدة الفاتحة فستقية افتراضياً؛ لطبقة الضغط نستخدم رمادياً فاتحاً (محايد) لإبراز
-    // تدرّجات الضغط دون ميل أخضر.
+    // القاعدة الفاتحة فستقية افتراضياً؛ لطبقة الضغط رمادي فاتح محايد.
     const lightTone = activeLayer === 'pressure' ? '#e8e6e2' : '#cedb9c';
-    const land  = darkMode ? '#20242a' : lightTone;
-    const water = darkMode ? '#161b22' : lightTone;
-    const bg    = darkMode ? '#0e1116' : lightTone;
+    // طبقتا الرياح/الهبّات على قاعدة داكنة لكن بلون أزرق بنفسجي (بدل الأسود) لإبراز الجسيمات.
+    const isWindBase = activeLayer === 'wind' || activeLayer === 'wind-gusts';
+    const windTone = '#514aa8';
+    const darkLand  = isWindBase ? windTone : '#20242a';
+    const darkWater = isWindBase ? windTone : '#161b22';
+    const darkBg    = isWindBase ? windTone : '#0e1116';
+    const land  = darkMode ? darkLand  : lightTone;
+    const water = darkMode ? darkWater : lightTone;
+    const bg    = darkMode ? darkBg    : lightTone;
 
     set('background', 'background-color', bg);
     // ملاحظة مهمة (مطابقة Zoom Earth): طبقة الطقس مُدرَجة أسفل مضلّعات اليابسة/الماء.
