@@ -129,6 +129,8 @@ export interface WeatherState {
     setSettingsOpen: (open: boolean) => void;
     searchOpen: boolean;
     setSearchOpen: (open: boolean) => void;
+    isobarsEnabled: boolean;
+    setIsobarsEnabled: (enabled: boolean) => void;
     legendOpen: boolean;
     setLegendOpen: (open: boolean) => void;
 
