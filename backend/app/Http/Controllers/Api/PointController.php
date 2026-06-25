@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Services\PointForecastFallback;
 use Illuminate\Http\Request;
 
 /**
@@ -37,6 +38,7 @@ class PointController extends Controller
         $lat = (float) $validated['latitude'];
         $lon = (float) $validated['longitude'];
         $model = $validated['model'] ?? 'GFS';
+        $requestedHours = (int) ($validated['hours'] ?? 168);
         // كل نموذج له مجلّد rasters خاص: GFS في rasters/، والبقية في rasters/<model>/.
         $modelDir = $model === 'ECMWF' ? 'rasters/ecmwf'
             : ($model === 'ICON' ? 'rasters/icon' : 'rasters');
@@ -75,10 +77,9 @@ class PointController extends Controller
         }
 
         if ($hours === 0) {
-            return response()->json([
-                'error' => true,
-                'message' => 'لا تتوفّر بيانات النقطة (لم تُبنَ المكعّبات بعد).',
-            ], 503);
+            return response()
+                ->json(PointForecastFallback::make($lat, $lon, $model, $requestedHours))
+                ->header('Cache-Control', 'public, max-age=300');
         }
 
         // اشتقاق: الإحساس (feels-like) وكود الحالة — لا نسيج لهما.

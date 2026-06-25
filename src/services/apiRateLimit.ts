@@ -33,6 +33,11 @@ function isRateLimited(error: unknown): boolean {
     const message = (error as AxiosError<{ message?: string }>)?.response?.data?.message ?? '';
     return /limit exceeded|too many requests|حصّة|الحصة/i.test(message);
 }
+function isLocalDataUnavailable(error: unknown): boolean {
+    const status = (error as AxiosError)?.response?.status;
+    const message = (error as AxiosError<{ message?: string }>)?.response?.data?.message ?? '';
+    return status === 503 && /raster|cube|point data|local/i.test(message);
+}
 
 /**
  * سجّل فشلاً وحدّث القاطع. يُرجع true إذا كان الفشل بسبب الحصّة اليومية (429).
@@ -40,6 +45,10 @@ function isRateLimited(error: unknown): boolean {
  */
 export function noteApiFailure(error: unknown): boolean {
     const quota = isRateLimited(error);
+    if (!quota && isLocalDataUnavailable(error)) {
+        return false;
+    }
+
     cooldownUntil = Math.max(
         cooldownUntil,
         Date.now() + (quota ? QUOTA_COOLDOWN_MS : TRANSIENT_COOLDOWN_MS)
