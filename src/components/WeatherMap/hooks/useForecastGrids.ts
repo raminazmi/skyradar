@@ -12,7 +12,7 @@ import { getStableGridBounds, getForecastGridResolution, chooseDisplayGrid, type
 
 interface Params {
     mapBounds: GridBounds | null;
-    selectedModel: string;
+    selectedModel: 'GFS' | 'ECMWF';
     currentTimeIndex: number;
     isPlaying: boolean;
     visibleLayers: Record<string, boolean>;

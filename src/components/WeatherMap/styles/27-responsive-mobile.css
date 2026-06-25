@@ -172,38 +172,44 @@
     }
 
     .time-slider-track-shell {
-        width: min(420px, 88vw);
+        width: min(360px, 80vw);
     }
 
     .zoom-time-controller {
         flex-direction: row;
         flex-wrap: wrap;
         align-items: center;
-        gap: 5px;
+        gap: 4px;
     }
 
     .zoom-time-card {
         width: auto;
         max-width: calc(100vw - 16px);
-        padding: 5px 6px;
-        gap: 3px;
+        padding: 3px 4px;
+        gap: 2px;
     }
 
     .zoom-time-speed { order: 2; }
     .zoom-time-relative { order: 3; }
 
     .time-selector-value {
-        font-size: 11px;
-        line-height: 1.1;
+        font-size: 10px;
+        line-height: 1.05;
     }
 
-    .time-selector { min-width: 54px; }
-    .time-selector-hour { min-width: 66px; }
+    .time-selector { min-width: 46px; }
+    .time-selector-hour { min-width: 56px; }
 
     .time-nav-btn,
     .time-play-btn {
-        width: 28px;
-        height: 28px;
+        width: 24px;
+        height: 24px;
+    }
+
+    .time-nav-btn svg,
+    .time-play-btn svg {
+        width: 13px;
+        height: 13px;
     }
 
     /* Search panel أسفل الـ toolbar مباشرةً */
@@ -253,7 +259,7 @@
     }
 
     .time-slider-track-shell {
-        width: min(360px, 92vw);
+        width: min(300px, 78vw);
     }
 
     .zoom-time-card {
