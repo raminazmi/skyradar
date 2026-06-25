@@ -49,17 +49,9 @@ def refresh(vars_list, hours, outdir):
     return fail
 
 
-def write_meta(outdir, hours):
-    """يكتب meta.json بزمن دورة GFS المرجعي — تستخدمه الواجهة لمحاذاة الإطار مع الزمن الحقيقي."""
-    try:
-        _, label = g.latest_run_url(g.VAR_CONFIG['temperature'], 0)  # "YYYYMMDD/HH f000"
-        day, rest = label.split('/')
-        run = int(rest.split()[0])
-        dt = datetime.datetime.strptime(day, '%Y%m%d').replace(
-            hour=run, tzinfo=datetime.timezone.utc)
-        run_epoch = int(dt.timestamp())
-    except Exception:
-        run_epoch = int(datetime.datetime.now(datetime.timezone.utc).timestamp())
+def write_meta(outdir, hours, run_epoch):
+    """يكتب meta.json بزمن الدورة المثبّتة نفسها التي وُلِّدت منها كل الإطارات — فتتطابق
+    محاذاة "الآن" في الواجهة تماماً مع بيانات الإطارات (لا انزياح ولا قفزات)."""
     meta = {'run_epoch': run_epoch, 'hours': max(hours) + 1, 'generated_epoch': int(time.time())}
     with open(os.path.join(outdir, 'meta.json'), 'w') as f:
         json.dump(meta, f)
@@ -76,9 +68,19 @@ def main():
     vars_list = args.vars.split(',') if args.vars else ALL_VARS
     hours = g.parse_hours(args.hours)
     os.makedirs(args.outdir, exist_ok=True)
+
+    # نثبّت دورة GFS واحدة متاحة بالكامل حتى أبعد ساعة، فيأتي كل متغيّر/إطار منها →
+    # تسلسل زمني متّسق ومحاذاة "الآن" صحيحة. عند الفشل: نسقط على سلوك الحلّ-عند-الطلب.
+    try:
+        day, run, run_epoch = g.resolve_cycle(max(hours))
+        print(f"دورة GFS المثبّتة: {day}/{run:02d}z (run_epoch={run_epoch})", flush=True)
+    except Exception as e:
+        run_epoch = int(datetime.datetime.now(datetime.timezone.utc).timestamp())
+        print(f"تعذّر تثبيت الدورة ({e!r}) — حلّ عند الطلب لكل ساعة.", flush=True)
+
     print(f"تحديث {len(vars_list)} متغيّر × {len(hours)} ساعة → {args.outdir}", flush=True)
     failed = refresh(vars_list, hours, args.outdir)
-    write_meta(args.outdir, hours)
+    write_meta(args.outdir, hours, run_epoch)
     sys.exit(1 if failed else 0)
 
 

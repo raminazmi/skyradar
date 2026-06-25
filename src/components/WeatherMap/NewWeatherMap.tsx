@@ -140,16 +140,23 @@ export function NewWeatherMap() {
         () => Array.from({ length: frameHours }, (_, i) => runEpoch + i * 3600),
         [runEpoch, frameHours],
     );
-    // الإطار المطابق للوقت الحالي (إزاحة من زمن الدورة) — نفتح عليه مرّة واحدة عند وصول meta.
+    // إطار "الآن" = إزاحة الساعات بين الزمن الحالي وزمن دورة النموذج (f000). يُستخدم لفتح
+    // الشريط على الآن (لا على بداية الدورة في الماضي) ولإعادة التشغيل إليه عند النهاية.
+    const nowFrameIndex = useMemo(() => {
+        if (!rasterMeta) return 0;
+        const idx = Math.round((Date.now() / 1000 - rasterMeta.run_epoch) / 3600);
+        return Math.max(0, Math.min(rasterMeta.hours - 1, idx));
+    }, [rasterMeta]);
+
+    // نفتح على إطار "الآن" مرّة واحدة عند وصول meta.
     const nowFrameRef = useRef(false);
     useEffect(() => {
         if (!rasterMeta || nowFrameRef.current) return;
-        const idx = Math.round((Date.now() / 1000 - rasterMeta.run_epoch) / 3600);
-        setCurrentTimeIndex(Math.max(0, Math.min(rasterMeta.hours - 1, idx)));
+        setCurrentTimeIndex(nowFrameIndex);
         nowFrameRef.current = true;
-    }, [rasterMeta, setCurrentTimeIndex]);
+    }, [rasterMeta, nowFrameIndex, setCurrentTimeIndex]);
 
-    useAutoplay({ isPlaying, playbackSpeed, frameCount: forecastTimes.length, canAdvance: playbackCanAdvance });
+    useAutoplay({ isPlaying, playbackSpeed, frameCount: forecastTimes.length, canAdvance: playbackCanAdvance, homeIndex: nowFrameIndex });
 
     // قاعدة الخريطة تتبع الطبقة الفعّالة (Zoom Earth): الحرارة على قاعدة فاتحة فستقية،
     // الرياح/الأمطار على قاعدة داكنة — بغضّ النظر عن مفتاح الوضع الداكن العام للواجهة.

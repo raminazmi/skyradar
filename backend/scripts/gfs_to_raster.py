@@ -54,26 +54,71 @@ VAR_CONFIG = {
 
 NOMADS = 'https://nomads.ncep.noaa.gov/cgi-bin/filter_gfs_0p25.pl'
 
+# ── دورة GFS مثبّتة لكامل التشغيل ─────────────────────────────────────────────
+# تُحلّ مرّة واحدة (resolve_cycle) فيأتي كل الإطارات وكل المتغيّرات من نفس الدورة:
+# تسلسل توقّع متّسق (لا قفزة بين إطارين متتاليين من دورتين مختلفتين)، ومحاذاة "الآن"
+# صحيحة لأن meta.run_epoch يطابق زمن صلاحية الإطار f000 تماماً.
+_CYCLE = None  # (day:str 'YYYYMMDD', run:int)
 
-def latest_run_url(cfg, hour):
-    """يجرّب أحدث دورات GFS (00/06/12/18) رجوعاً حتى يجد ملفاً متاحاً (200)."""
+
+def set_cycle(day, run):
+    global _CYCLE
+    _CYCLE = (day, int(run))
+
+
+def get_cycle():
+    return _CYCLE
+
+
+def _gfs_url(noaa_var, lev, day, run, hour):
+    q = (f"?file=gfs.t{run:02d}z.pgrb2.0p25.f{hour:03d}"
+         f"&var_{noaa_var}=on&lev_{lev}=on"
+         f"&leftlon=0&rightlon=360&toplat=90&bottomlat=-90"
+         f"&dir=%2Fgfs.{day}%2F{run:02d}%2Fatmos")
+    return NOMADS + q, f"{day}/{run:02d} f{hour:03d}"
+
+
+def _head_ok(url):
+    try:
+        with urllib.request.urlopen(urllib.request.Request(url, method='HEAD'), timeout=30) as r:
+            return r.status == 200
+    except Exception:
+        return False
+
+
+def resolve_cycle(max_hour, probe_var='TMP', probe_lev='2_m_above_ground'):
+    """يثبّت أحدث دورة GFS (00/06/12/18) متاحة *بالكامل* حتى max_hour، ويخزّنها للتشغيل كلّه.
+    نفحص أبعد ساعة مطلوبة (آخر ما يُنشر)؛ إن توفّرت فكل الساعات الأقل من نفس الدورة متوفّرة.
+    يُرجع (day, run, run_epoch)."""
     now = datetime.datetime.utcnow()
-    for back in range(0, 30, 6):  # حتى ~30 ساعة للخلف
+    for back in range(0, 36, 6):  # حتى ~36 ساعة للخلف (تغطّي زمن نشر الدورة الكامل)
         t = now - datetime.timedelta(hours=back)
         run = (t.hour // 6) * 6
         day = t.strftime('%Y%m%d')
-        q = (f"?file=gfs.t{run:02d}z.pgrb2.0p25.f{hour:03d}"
-             f"&var_{cfg['noaa_var']}=on&lev_{cfg['lev']}=on"
-             f"&leftlon=0&rightlon=360&toplat=90&bottomlat=-90"
-             f"&dir=%2Fgfs.{day}%2F{run:02d}%2Fatmos")
-        url = NOMADS + q
-        try:
-            req = urllib.request.Request(url, method='HEAD')
-            with urllib.request.urlopen(req, timeout=30) as r:
-                if r.status == 200:
-                    return url, f"{day}/{run:02d} f{hour:03d}"
-        except Exception:
-            continue
+        url, _ = _gfs_url(probe_var, probe_lev, day, run, max_hour)
+        if _head_ok(url):
+            set_cycle(day, run)
+            dt = datetime.datetime.strptime(day, '%Y%m%d').replace(hour=run, tzinfo=datetime.timezone.utc)
+            return day, run, int(dt.timestamp())
+    raise RuntimeError("تعذّر إيجاد دورة GFS متاحة بالكامل حتى الساعة المطلوبة")
+
+
+def latest_run_url(cfg, hour):
+    """رابط ملف GFS للساعة المطلوبة. يستخدم الدورة المثبّتة إن وُجدت (المسار الموصى به)؛
+    وإلا يحلّها مرّة (للتشغيل المنفرد) ثم يثبّتها فتبقى بقية الساعات على نفس الدورة."""
+    if _CYCLE is not None:
+        day, run = _CYCLE
+        return _gfs_url(cfg['noaa_var'], cfg['lev'], day, run, hour)
+
+    now = datetime.datetime.utcnow()
+    for back in range(0, 36, 6):
+        t = now - datetime.timedelta(hours=back)
+        run = (t.hour // 6) * 6
+        day = t.strftime('%Y%m%d')
+        url, label = _gfs_url(cfg['noaa_var'], cfg['lev'], day, run, hour)
+        if _head_ok(url):
+            set_cycle(day, run)  # ثبّت الدورة لبقية الساعات → اتساق زمني
+            return url, label
     raise RuntimeError("تعذّر إيجاد دورة GFS متاحة")
 
 
@@ -126,22 +171,20 @@ WIND_SPEED_MAX = 120.0  # يطابق VALUE_RANGES['wind']
 
 
 def wind_url(hour):
+    """رابط رياح GFS (U/V) من الدورة المثبّتة نفسها كي تتطابق الرياح زمنياً مع باقي الطبقات."""
+    if _CYCLE is not None:
+        day, run = _CYCLE
+        return _gfs_url('UGRD=on&var_VGRD', '10_m_above_ground', day, run, hour)
+
     now = datetime.datetime.utcnow()
-    for back in range(0, 30, 6):
+    for back in range(0, 36, 6):
         t = now - datetime.timedelta(hours=back)
         run = (t.hour // 6) * 6
         day = t.strftime('%Y%m%d')
-        q = (f"?file=gfs.t{run:02d}z.pgrb2.0p25.f{hour:03d}"
-             f"&var_UGRD=on&var_VGRD=on&lev_10_m_above_ground=on"
-             f"&leftlon=0&rightlon=360&toplat=90&bottomlat=-90"
-             f"&dir=%2Fgfs.{day}%2F{run:02d}%2Fatmos")
-        url = NOMADS + q
-        try:
-            with urllib.request.urlopen(urllib.request.Request(url, method='HEAD'), timeout=30) as rr:
-                if rr.status == 200:
-                    return url, f"{day}/{run:02d} f{hour:03d}"
-        except Exception:
-            continue
+        url, label = _gfs_url('UGRD=on&var_VGRD', '10_m_above_ground', day, run, hour)
+        if _head_ok(url):
+            set_cycle(day, run)
+            return url, label
     raise RuntimeError("تعذّر إيجاد دورة GFS متاحة للرياح")
 
 
@@ -206,7 +249,13 @@ def main():
 
     if args.hours:
         outdir = args.outdir or '.'
-        for h in parse_hours(args.hours):
+        hours_list = parse_hours(args.hours)
+        # ثبّت دورة واحدة لكامل الدفعة → اتساق زمني بين الإطارات (لا قفزات).
+        try:
+            resolve_cycle(max(hours_list))
+        except Exception as e:
+            print(f"تعذّر تثبيت الدورة ({e!r}) — حلّ عند الطلب.", flush=True)
+        for h in hours_list:
             try:
                 generate_one(cfg, args.var, h, os.path.join(outdir, f"{args.var}_{h:03d}.png"))
             except Exception as e:
