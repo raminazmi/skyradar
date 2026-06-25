@@ -20,7 +20,7 @@
         width: 100%;
         border-radius: 0 0 14px 14px;
         border-top: none;
-        padding: 6px 14px 7px;
+        padding: 8px 8px 5px;
     }
 
     .central-legend .legend-title {
@@ -37,24 +37,24 @@
         margin-top: 3px;
     }
 
-    /* ── زر الطبقات: دائري أسفل اليسار ── */
+    /* ── زر الطبقات: دائري أسفل اليسار، فوق شريط الوقت ── */
     .layer-controls-toggle,
     .layer-controls-toggle.with-info-panel {
         top: auto;
-        bottom: 70px;
-        left: 12px;
-        width: 46px;
-        height: 46px;
+        bottom: 90px;
+        left: 10px;
+        width: 35px;
+        height: 35px;
         border-radius: 50%;
     }
 
     /* ── Toolbar: أزرار دائرية أسفل اليمين، الأساسية فقط ── */
     .right-toolbar {
         top: auto;
-        bottom: 70px;
-        right: 12px;
+        bottom: 90px;
+        right: 6px;
         flex-direction: column;
-        gap: 8px;
+        gap: 7px;
         padding: 0;
         background: transparent;
         border: none;
@@ -68,33 +68,76 @@
     }
 
     .toolbar-btn {
-        width: 46px;
-        height: 46px;
-        font-size: 18px;
+        width: 40px;
+        height: 40px;
+        font-size: 16px;
         border-radius: 50%;
         background: var(--bg-panel);
         border: 1px solid var(--border-color);
-        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.28);
+        box-shadow: 0 3px 12px rgba(0, 0, 0, 0.26);
     }
 
-    /* ── اللوحات: bottom-sheet فوق شريط الوقت ── */
+    /* ── مبدّل النموذج (GFS/ECMWF): يُنقل للأعلى-اليسار كي لا يختفي خلف شريط الوقت ── */
+    .main-model-switch {
+        top: 52px;
+        bottom: auto;
+        left: auto;
+        right: 10px;
+        gap: 4px;
+        padding: 3px;
+        z-index: 600;
+    }
+
+    .main-model-btn {
+        padding: 4px 10px;
+        font-size: 10px;
+    }
+
+    .main-model-btn .main-model-res { display: none; } /* اسم النموذج فقط على الجوّال */
+
+    /* ── أزرار الجسيمات/الإيزوبار: عمود أسفل-اليسار فوق زر الطبقات، أيقونة فقط ── */
+    .particle-toggle {
+        bottom: 135px;
+        left: 10px;
+        right: auto;
+        width: 35px;
+        height: 35px;
+        padding: 0;
+        justify-content: center;
+        border-radius: 50%;
+    }
+
+    .particle-toggle span { display: none; }
+
+    .particle-toggle.isobar-toggle {
+        bottom: 180px;            /* فوق زر الجسيمات مباشرةً — لا تراكب */
+    }
+
+    /* ── اللوحات (الطبقات/الطقس): نافذة وسطية بهوامش جانبية — موحّدة مع نافذة الإعدادات ──
+       width لا يأخذ 100%؛ هامش 16px يميناً ويساراً، وخلفية معتمة عبر box-shadow (مقصورة
+       على اللوحة نفسها فلا تتعارض z-index مع الشريط الجانبي/الإعدادات). */
     .weather-info-panel,
     .layer-controls,
     .layer-controls.with-info-panel {
-        top: auto;
-        left: 8px;
-        right: 8px;
-        bottom: 66px;
-        width: auto;
-        max-width: none;
-        max-height: calc(100dvh - 66px - 56px);
+        top: 50%;
+        left: 50%;
+        right: auto;
+        bottom: auto;
+        transform: translate(-50%, -50%);
+        width: calc(100vw - 32px);
+        max-width: 480px;
+        max-height: 85vh;
         border-radius: 16px;
+        z-index: 2050;
+        box-shadow: 0 0 0 100vmax rgba(0, 0, 0, 0.6), 0 18px 44px rgba(0, 0, 0, 0.4);
     }
 
-    /* عند فتح لوحة: أخفِ الأزرار العائمة والـ legend لتفادي التراكب */
+    /* عند فتح لوحة: أخفِ كل الأزرار العائمة والـ legend لتفادي التراكب مع اللوحة */
     .weather-map-container.panel-overlay-open .layer-status-panel,
     .weather-map-container.panel-overlay-open .central-legend,
     .weather-map-container.panel-overlay-open .right-toolbar,
+    .weather-map-container.panel-overlay-open .main-model-switch,
+    .weather-map-container.panel-overlay-open .particle-toggle,
     .weather-map-container.panel-overlay-open .layer-controls-toggle {
         display: none;
     }

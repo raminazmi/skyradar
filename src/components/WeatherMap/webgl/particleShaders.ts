@@ -104,7 +104,9 @@ varying float v_speed_t;
 uniform float u_alpha;
 uniform vec3 u_color;     // لون الجسيمة (أبيض في الوضع الداكن، داكن في الفاتح)
 void main() {
-    // اللون يأتي من uniform ليتكيّف مع الثيم (الجسيمات البيضاء تختفي فوق خريطة فاتحة).
+    // مخرَج premultiplied-alpha: نضرب اللون في ألفا حتى يبقى الذيل أبيض وهو يتلاشى
+    // نحو الشفافية بدل أن يميل للأسود (تلاشي RGB أسرع من ألفا = طيف داكن).
     // ألفا يتدرّج قليلاً مع السرعة لإحساس بالعمق.
-    gl_FragColor = vec4(u_color, u_alpha * (0.6 + 0.4 * v_speed_t));
+    float a = u_alpha * (0.6 + 0.4 * v_speed_t);
+    gl_FragColor = vec4(u_color * a, a);
 }`;

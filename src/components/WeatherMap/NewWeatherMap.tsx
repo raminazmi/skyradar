@@ -15,6 +15,8 @@ import { TimeSlider }       from './TimeSlider';
 import { WeatherInfoPanel } from './WeatherInfoPanel';
 import { ModelSwitch } from './ModelSwitch';
 import { ParticleToggle } from './ParticleToggle';
+import { IsobarToggle } from './IsobarToggle';
+import { IsobarLayer } from './IsobarLayer';
 import { LayerControls }    from './LayerControls';
 import { SettingsPanel }    from './SettingsPanel';
 import { HeatmapWebGLLayer }   from './HeatmapWebGLLayer';
@@ -62,7 +64,7 @@ export function NewWeatherMap() {
     const {
         currentLocation, selectedModel, visibleLayers, darkMode,
         weatherData, currentTimeIndex, isPlaying, playbackSpeed,
-        settingsOpen, setSettingsOpen, searchOpen,
+        settingsOpen, setSettingsOpen, searchOpen, isobarsEnabled,
         infoPanelOpen, layerControlsOpen, sidebarOpen,
         mapBounds, zoomLevel,
         setCurrentLocation, setInfoPanelOpen, setCurrentTimeIndex,
@@ -214,6 +216,13 @@ export function NewWeatherMap() {
                         <SatelliteTileLayer />
                         <RadarTileLayer />
 
+                        {/* خطوط تساوي الضغط — مع طبقة الضغط فقط */}
+                        <IsobarLayer
+                            timeIndex={currentTimeIndex}
+                            dir={rasterDir}
+                            enabled={activeHeatmapType === 'pressure' && isobarsEnabled}
+                        />
+
                         {/* طبقة هيتماب الرياح — WebGL */}
                         {visibleLayers.wind && windGrid && (
                             <HeatmapWebGLLayer id="weather-heatmap-wind" grid={windGrid} type="wind" opacity={0.8} />
@@ -278,12 +287,14 @@ export function NewWeatherMap() {
                     {/* مفتاح الألوان المركزي */}
                     <CentralLegend />
 
-                    {/* لوحة معلومات الطقس */}
-                    {weatherData && infoPanelOpen && (
+                    {/* لوحة معلومات الطقس — تُفتح بمجرد الضغط على إحداثية، وتعرض حالة تحميل/خطأ
+                        حتى لو لم تصل البيانات بعد (بدل ألا تظهر إطلاقاً عند فشل/تأخّر الـ API). */}
+                    {infoPanelOpen && (
                         <WeatherInfoPanel
                             weatherData={weatherData}
                             currentTimeIndex={currentTimeIndex}
                             location={currentLocation}
+                            onRetry={() => currentLocation && setCurrentLocation(currentLocation.lat, currentLocation.lon)}
                         />
                     )}
 
@@ -299,6 +310,9 @@ export function NewWeatherMap() {
 
                     {/* زرّ سريع لتبديل جسيمات الرياح للطبقة الفعّالة — أسلوب Zoom Earth */}
                     <ParticleToggle activeLayerKey={activeLayerKey} />
+
+                    {/* زرّ سياقي لخطوط تساوي الضغط — يظهر مع طبقة الضغط فقط */}
+                    <IsobarToggle activeLayerKey={activeLayerKey} />
 
                     {/* مبدّل النموذج (GFS/ECMWF) ظاهر دائماً على الصفحة الرئيسية — أسلوب Zoom Earth */}
                     <ModelSwitch />

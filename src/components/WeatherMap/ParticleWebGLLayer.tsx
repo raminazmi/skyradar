@@ -24,8 +24,9 @@ interface ParticleWebGLLayerProps {
 }
 
 export function ParticleWebGLLayer({ id, windGrid, settings, darkMode = true }: ParticleWebGLLayerProps) {
-    const mapRef   = useMapRef();
-    const layerRef = useRef<ParticleGLLayer | null>(null);
+    const mapRef     = useMapRef();
+    const layerRef   = useRef<ParticleGLLayer | null>(null);
+    const reassertRef = useRef<(() => void) | null>(null);
 
     useEffect(() => {
         const wrap = mapRef.current;
@@ -47,6 +48,24 @@ export function ParticleWebGLLayer({ id, windGrid, settings, darkMode = true }: 
             }
         };
 
+        // طبقة scalar للطبقة الفعّالة تُدرَج بعد طبقة الجسيمات فتعلوها وتخفيها (تظهر فقط بعد
+        // إطفاء/تشغيل الجسيمات يدوياً). نُعيد رفع الجسيمات للأعلى عند كل styledata — لكن فقط
+        // إن وُجدت طبقة حرارة/رياح فوقها فعلاً، وإلّا فإن moveLayer نفسه يُطلق styledata = حلقة لانهائية.
+        reassertRef.current = () => {
+            try {
+                if (!map.getLayer(id)) return;
+                const layers = map.getStyle()?.layers ?? [];
+                const pIdx = layers.findIndex((l) => l.id === id);
+                if (pIdx === -1) return;
+                const coveredAbove = layers
+                    .slice(pIdx + 1)
+                    .some((l) => l.id === 'weather-heatmap-scalar' || l.id === 'weather-heatmap-wind');
+                if (!coveredAbove) return; // لا شيء فوقها → لا تحريك → لا حلقة
+                map.moveLayer(id, getWeatherInsertBeforeId(map));
+            } catch { /* تجاهل */ }
+        };
+        map.on('styledata', reassertRef.current);
+
         const onStyleData = () => { if (map.isStyleLoaded()) { map.off('styledata', onStyleData); add(); } };
         if (map.isStyleLoaded()) add();
         else map.on('styledata', onStyleData);
@@ -54,6 +73,8 @@ export function ParticleWebGLLayer({ id, windGrid, settings, darkMode = true }: 
         return () => {
             cancelled = true;
             map.off('styledata', onStyleData);
+            if (reassertRef.current) map.off('styledata', reassertRef.current);
+            reassertRef.current = null;
             layerRef.current = null;
             try {
                 if (map.getLayer(id)) map.removeLayer(id);

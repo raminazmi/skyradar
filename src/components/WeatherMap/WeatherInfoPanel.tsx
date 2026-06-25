@@ -5,9 +5,10 @@ import { type WeatherData, useWeatherStore } from '../../store/weatherStore';
 import { WeatherIcon } from './WeatherIcon';
 
 interface WeatherInfoPanelProps {
-    weatherData: WeatherData;
+    weatherData: WeatherData | null;
     currentTimeIndex: number;
     location: { lat: number; lon: number } | null;
+    onRetry?: () => void;
 }
 
 const arabicConditionMap: Record<string, string> = {
@@ -85,7 +86,7 @@ function formatDayDivider(date: Date, previousDate: Date | null) {
     return null;
 }
 
-export function WeatherInfoPanel({ weatherData, currentTimeIndex, location }: WeatherInfoPanelProps) {
+export function WeatherInfoPanel({ weatherData, currentTimeIndex, location, onRetry }: WeatherInfoPanelProps) {
     const {
         units,
         selectedModel,
@@ -96,9 +97,50 @@ export function WeatherInfoPanel({ weatherData, currentTimeIndex, location }: We
         isLoading,
     } = useWeatherStore();
 
-    const times = weatherData.hourly.time;
-    if (!times.length) {
-        return null;
+    const coordsLabel = location
+        ? `${formatCoordinate(location.lat, 'N', 'S')} , ${formatCoordinate(location.lon, 'E', 'W')}`
+        : 'الموقع المحدد';
+
+    // حالة عدم وجود بيانات بعد: نُظهر اللوحة دائماً (تحميل أو خطأ) بدل ألا تظهر إطلاقاً —
+    // فالضغط على الإحداثية يجب أن يفتح اللوحة حتى لو تأخّر/فشل طلب الـ API.
+    const times = weatherData?.hourly.time ?? [];
+    if (!weatherData || !times.length) {
+        return (
+            <div className="weather-info-panel">
+                <div className="weather-panel-header">
+                    <button
+                        className="panel-close-btn"
+                        onClick={() => setInfoPanelOpen(false)}
+                        title="إغلاق"
+                        type="button"
+                    >
+                        <FiX />
+                    </button>
+                    <div className="weather-panel-location">
+                        <div className="weather-panel-coords">{coordsLabel}</div>
+                        <div className="weather-panel-meta"><span>توقعات كل ساعة</span></div>
+                    </div>
+                </div>
+
+                <div className="weather-panel-placeholder">
+                    {isLoading ? (
+                        <>
+                            <FiLoader className="panel-spinner" />
+                            <span>جاري جلب بيانات الطقس...</span>
+                        </>
+                    ) : (
+                        <>
+                            <span>تعذّر جلب بيانات الطقس لهذا الموقع.</span>
+                            {onRetry && (
+                                <button className="weather-panel-retry" onClick={onRetry} type="button">
+                                    إعادة المحاولة
+                                </button>
+                            )}
+                        </>
+                    )}
+                </div>
+            </div>
+        );
     }
 
     const safeIndex = clamp(currentTimeIndex, 0, times.length - 1);

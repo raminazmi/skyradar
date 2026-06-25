@@ -214,7 +214,8 @@ export class ParticleGLLayer implements CustomLayerInterface {
         gl.bindFramebuffer(gl.FRAMEBUFFER, prevFbo);
         gl.viewport(0, 0, gl.drawingBufferWidth, gl.drawingBufferHeight);
         gl.enable(gl.BLEND);
-        gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+        // premultiplied-alpha: نسيج الشاشة يحمل ألواناً مضروبة في ألفا مسبقاً → دمج نظيف بلا حواف داكنة
+        gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
         this.drawScreenTexture(gl, this.screenTex1!, 1.0);
 
         // تبديل (ping-pong)

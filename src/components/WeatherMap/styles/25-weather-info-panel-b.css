@@ -18,6 +18,39 @@
     border-radius: 999px;
 }
 
+/* حالة التحميل/الخطأ داخل لوحة الطقس (قبل وصول البيانات) */
+.weather-panel-placeholder {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    padding: 32px 20px;
+    text-align: center;
+    font-size: 13px;
+    color: rgba(230, 237, 243, 0.7);
+}
+
+.weather-panel-placeholder .panel-spinner {
+    width: 26px;
+    height: 26px;
+    animation: spin 1s linear infinite;
+}
+
+.weather-panel-retry {
+    padding: 8px 18px;
+    border: 1px solid var(--border-color);
+    border-radius: 999px;
+    background: #6d5efc;
+    color: #fff;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    font-family: inherit;
+}
+
+.weather-panel-retry:hover { background: #5b4ce0; }
+
 .weather-panel-day-divider {
     padding: 8px 18px 4px;
     font-size: 11px;
