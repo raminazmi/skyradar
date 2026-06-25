@@ -6,4 +6,5 @@ cfgrib
 ecmwflibs
 findlibs
 ecmwf-opendata
+Pillow
 scipy            # إعادة تشبيك ICON (cKDTree: أقرب خلية icosahedral لكل نقطة شبكة منتظمة)
