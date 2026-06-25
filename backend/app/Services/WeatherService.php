@@ -73,40 +73,120 @@ class WeatherService
         );
     }
 
+    /**
+     * نافذة الجلب الموحّدة لشبكة الخريطة — ثابتة لا تعتمد على timeIndex.
+     * بهذا تُجلب السلسلة الزمنية الكاملة للبلاطة مرّة واحدة وتُخدَم منها جميع إطارات شريط
+     * الوقت فوراً، بدل إرسال طلب Open-Meteo منفصل لكل إطار (تسريع كبير + تفادي 429).
+     */
+    protected function gridForecastWindow(string $model): int
+    {
+        return min($this->getMaxForecastHours($model), 73); // ~3 أيام تغطّي شريط الوقت كاملاً بطلب واحد
+    }
+
     public function getGridData($bounds, $model = 'GFS', $type = 'temperature', $timeIndex = 0, $resolution = 12)
     {
         $normalizedBounds = $this->normalizeBounds($bounds);
         $sampleResolution = $this->determineGridSampleResolution($normalizedBounds, (int) $resolution, $model);
-        $forecastHours = min(max(((int) $timeIndex) + 3, 3), $this->getMaxForecastHours($model));
+        $windowHours = $this->gridForecastWindow($model);
+
+        // الجلب الموحّد (بلا timeIndex): سلسلة زمنية كاملة لكل بلاطة تُخزَّن مرّة وتخدم كل الإطارات.
+        $tile = $this->fetchTileForecasts($normalizedBounds, $model, $type, $sampleResolution, $windowHours);
+        $rows = $tile['rows'];
+        $cols = $tile['cols'];
+        $coordinates = $tile['coordinates'];
+        $forecasts = $tile['forecasts'];
+
+        if (($tile['mapped'] ?? 0) === 0) {
+            return WeatherGridFallback::make(
+                $normalizedBounds,
+                $rows,
+                $cols,
+                $coordinates,
+                $type,
+                $model,
+                (int) $timeIndex,
+                $sampleResolution
+            );
+        }
+
+        // تجميع الإطار المطلوب من السلاسل المخزّنة — عملية حسابية رخيصة بلا أي طلب شبكي.
+        $points = array_fill(0, $rows, array_fill(0, $cols, null));
+        $validTime = null;
+        foreach ($coordinates as $index => $meta) {
+            $forecast = $forecasts[$index] ?? null;
+            if (!is_array($forecast) || empty($forecast['hourly'])) {
+                continue;
+            }
+
+            $points[$meta['row']][$meta['col']] = $this->mapForecastToGridPoint(
+                $meta['lat'],
+                $meta['lon'],
+                $forecast,
+                $type,
+                (int) $timeIndex
+            );
+
+            if ($validTime === null) {
+                $validTime = $this->extractGridValidTime($forecast, (int) $timeIndex);
+            }
+        }
+
+        $points = $this->fillMissingGridPointsFromProvider($points, $coordinates);
+
+        return [
+            'bounds' => $normalizedBounds,
+            'rows' => $rows,
+            'cols' => $cols,
+            'points' => $points,
+            'timestamp' => now()->toIso8601String(),
+            'type' => $type,
+            'samplingResolution' => $sampleResolution,
+            'source' => 'open-meteo',
+            'provider' => 'Open-Meteo',
+            'model' => $model,
+            'runTime' => now()->startOfHour()->toIso8601String(),
+            'validTime' => $validTime ?? now()->startOfHour()->addHours((int) $timeIndex)->toIso8601String(),
+            'unit' => $this->getUnitForGridType($type),
+            'attribution' => 'Open-Meteo, NOAA/NCEP GFS, DWD ICON',
+        ];
+    }
+
+    /**
+     * يجلب — ويُخزّن مرّة واحدة — السلاسل الزمنية الكاملة لجميع نقاط البلاطة.
+     * مفتاح الكاش بلا timeIndex، فيُعاد استخدام نفس الجلب لكل إطارات شريط الوقت.
+     *
+     * @return array{rows:int, cols:int, coordinates:array, forecasts:array, mapped:int}
+     */
+    protected function fetchTileForecasts(array $normalizedBounds, string $model, string $type, int $sampleResolution, int $windowHours): array
+    {
         $cacheKey = sprintf(
-            'weather_grid_v2_%s_%s_%s_%s_%s_%s_%s_%s',
+            'weather_tile_v3_%s_%s_%s_%s_%s_%s_%s_%s',
             $type,
             $model,
             $normalizedBounds['north'],
             $normalizedBounds['south'],
             $normalizedBounds['east'],
             $normalizedBounds['west'],
-            $timeIndex,
-            $sampleResolution
+            $sampleResolution,
+            $windowHours
         );
 
         return $this->rememberWithStaleFallback(
             $cacheKey,
             now()->addMinutes(60),
-            now()->addHours(24), // نسخة احتياطية يوماً كاملاً: البيانات تبقى معروضة حتى لو نفدت حصة Open-Meteo
-            function () use ($normalizedBounds, $model, $type, $timeIndex, $sampleResolution, $forecastHours) {
+            now()->addHours(24), // نسخة احتياطية يوماً كاملاً: تبقى البيانات معروضة حتى لو نفدت حصة Open-Meteo
+            function () use ($normalizedBounds, $model, $type, $sampleResolution, $windowHours) {
                 [$rows, $cols, $coordinates] = $this->buildGridCoordinates($normalizedBounds, $sampleResolution);
                 $variables = $this->getVariablesForGridType($type);
-                $points = array_fill(0, $rows, array_fill(0, $cols, null));
-                $mappedPoints = 0;
-                $validTime = null;
+                $forecasts = array_fill(0, count($coordinates), null);
+                $mapped = 0;
 
                 // نجمّع نقاط الشبكة في دفعات، ونرسل كل دفعة كطلب Open-Meteo واحد متعدد المواقع
-                // (يدعم latitude=a,b,c). هذا يحوّل عشرات/مئات الطلبات إلى عدد قليل جداً،
-                // فيتفادى حظر معدّل الطلبات (429) ويسرّع الاستجابة بشكل كبير.
-                $chunks = array_chunk($coordinates, max(1, $this->gridChunkSize));
+                // (يدعم latitude=a,b,c). هذا يحوّل عشرات/مئات الطلبات إلى عدد قليل جداً.
+                // preserve_keys=true: تبقى الفهارس الأصلية للإحداثيات لربط الردّ بنقطته بدقّة.
+                $chunks = array_chunk($coordinates, max(1, $this->gridChunkSize), true);
 
-                $responses = Http::pool(function (\Illuminate\Http\Client\Pool $pool) use ($chunks, $model, $variables, $forecastHours) {
+                $responses = Http::pool(function (\Illuminate\Http\Client\Pool $pool) use ($chunks, $model, $variables, $windowHours) {
                     $requests = [];
                     foreach ($chunks as $chunk) {
                         $query = $this->withApiKey([
@@ -118,7 +198,7 @@ class WeatherService
                             'precipitation_unit' => 'mm',
                             'timeformat' => 'unixtime',
                             'timezone' => 'GMT',
-                            'forecast_hours' => $forecastHours,
+                            'forecast_hours' => $windowHours,
                         ]);
 
                         $requests[] = $pool->acceptJson()
@@ -131,67 +211,36 @@ class WeatherService
                     return $requests;
                 });
 
-                foreach ($responses as $chunkIndex => $response) {
-                    if ($response instanceof \Exception || !$response->ok()) {
+                // ردود البِركة مرتّبة بترتيب إضافة الطلبات (0..n) المطابق لترتيب $chunks.
+                $chunkKeys = array_keys($chunks);
+                foreach ($chunkKeys as $poolIndex => $chunkKey) {
+                    $response = $responses[$poolIndex] ?? null;
+                    if (!$response || $response instanceof \Exception || !$response->ok()) {
                         continue;
                     }
 
                     $payload = $response->json();
                     // طلب متعدد المواقع → مصفوفة قائمة بنفس ترتيب الإدخال؛ موقع واحد → كائن مفرد.
                     $forecastList = (is_array($payload) && array_is_list($payload)) ? $payload : [$payload];
-                    $chunk = $chunks[$chunkIndex] ?? [];
 
-                    foreach ($chunk as $offset => $meta) {
+                    $offset = 0;
+                    foreach ($chunks[$chunkKey] as $coordIndex => $meta) {
                         $forecast = $forecastList[$offset] ?? null;
+                        $offset++;
                         if (!is_array($forecast) || empty($forecast['hourly'])) {
                             continue;
                         }
-
-                        $points[$meta['row']][$meta['col']] = $this->mapForecastToGridPoint(
-                            $meta['lat'],
-                            $meta['lon'],
-                            $forecast,
-                            $type,
-                            (int) $timeIndex
-                        );
-                        $mappedPoints++;
-
-                        if ($validTime === null) {
-                            $validTime = $this->extractGridValidTime($forecast, (int) $timeIndex);
-                        }
+                        $forecasts[$coordIndex] = $forecast;
+                        $mapped++;
                     }
                 }
 
-                if ($mappedPoints === 0) {
-                    return WeatherGridFallback::make(
-                        $normalizedBounds,
-                        $rows,
-                        $cols,
-                        $coordinates,
-                        $type,
-                        $model,
-                        (int) $timeIndex,
-                        $sampleResolution
-                    );
-                }
-
-                $points = $this->fillMissingGridPointsFromProvider($points, $coordinates);
-
                 return [
-                    'bounds' => $normalizedBounds,
                     'rows' => $rows,
                     'cols' => $cols,
-                    'points' => $points,
-                    'timestamp' => now()->toIso8601String(),
-                    'type' => $type,
-                    'samplingResolution' => $sampleResolution,
-                    'source' => 'open-meteo',
-                    'provider' => 'Open-Meteo',
-                    'model' => $model,
-                    'runTime' => now()->startOfHour()->toIso8601String(),
-                    'validTime' => $validTime ?? now()->startOfHour()->addHours((int) $timeIndex)->toIso8601String(),
-                    'unit' => $this->getUnitForGridType($type),
-                    'attribution' => 'Open-Meteo, NOAA/NCEP GFS, DWD ICON',
+                    'coordinates' => $coordinates,
+                    'forecasts' => $forecasts,
+                    'mapped' => $mapped,
                 ];
             }
         );

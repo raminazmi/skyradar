@@ -94,6 +94,7 @@ class WeatherController extends Controller
             'resolution' => 'nullable|integer|min:4|max:60',
         ]);
 
+        $startedAt = microtime(true);
         try {
             $data = $this->weatherService->getGridData(
                 [
@@ -111,7 +112,13 @@ class WeatherController extends Controller
             return $this->providerFailureResponse($exception);
         }
 
-        return response()->json($data);
+        $elapsedMs = (int) round((microtime(true) - $startedAt) * 1000);
+
+        // قياس قبل/بعد: زمن المعالجة بالخادم يظهر في ترويسة الاستجابة (X-Grid-Time-Ms).
+        // ترويسات الكاش تتيح للمتصفح/CDN خدمة الإطار نفسه بلا رحلة جديدة للخادم.
+        return response()->json($data)
+            ->header('X-Grid-Time-Ms', (string) $elapsedMs)
+            ->header('Cache-Control', 'public, max-age=300, stale-while-revalidate=900');
     }
 
     protected function providerFailureResponse(WeatherProviderException $exception)

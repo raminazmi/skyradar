@@ -42,6 +42,21 @@ class WeatherGridService {
     private readonly cacheTtl = 30 * 60 * 1000;
     private readonly maxCacheEntries = 80;
 
+    /**
+     * عدّادات قياس الأداء (قبل/بعد). افحصها من الكونسول عبر:
+     *   weatherGridService.stats
+     * cacheHits: خُدمت من كاش الذاكرة بلا شبكة | networkFetches: رحلات فعلية للخادم |
+     * avgNetworkMs: متوسّط زمن الرحلة | avgServerMs: متوسّط زمن المعالجة بالخادم (X-Grid-Time-Ms).
+     */
+    public readonly stats = {
+        cacheHits: 0,
+        networkFetches: 0,
+        totalNetworkMs: 0,
+        totalServerMs: 0,
+        get avgNetworkMs() { return this.networkFetches ? Math.round(this.totalNetworkMs / this.networkFetches) : 0; },
+        get avgServerMs() { return this.networkFetches ? Math.round(this.totalServerMs / this.networkFetches) : 0; },
+    };
+
     private normalizeLongitude(value: number): number {
         return ((((value + 180) % 360) + 360) % 360) - 180;
     }
@@ -114,7 +129,7 @@ class WeatherGridService {
         const safeResolution = this.resolveRequestResolution(normalizedBounds, resolution);
         const cacheKey = this.buildCacheKey(type, normalizedBounds, model, timeIndex, safeResolution);
         const cached = this.cache.get(cacheKey);
-        if (cached && Date.now() - cached.timestamp < this.cacheTtl) return cached.data;
+        if (cached && Date.now() - cached.timestamp < this.cacheTtl) { this.stats.cacheHits++; return cached.data; }
 
         const existing = this.inFlight.get(cacheKey);
         if (existing) return existing;
@@ -126,6 +141,7 @@ class WeatherGridService {
             return Promise.reject(new Error('Weather API temporarily unavailable (rate limited).'));
         }
 
+        const startedAt = (typeof performance !== 'undefined' ? performance.now() : Date.now());
         const request = axios.get(`${apiBaseUrl}/grid`, {
             params: { ...normalizedBounds, model, type, timeIndex, resolution: safeResolution },
             timeout: 30000,
@@ -133,6 +149,10 @@ class WeatherGridService {
             .then((response) => {
                 const grid = response.data as WeatherGrid;
                 noteApiSuccess();
+                this.stats.networkFetches++;
+                this.stats.totalNetworkMs += (typeof performance !== 'undefined' ? performance.now() : Date.now()) - startedAt;
+                const serverMs = Number(response.headers?.['x-grid-time-ms']);
+                if (Number.isFinite(serverMs)) this.stats.totalServerMs += serverMs;
                 this.rememberGrid(cacheKey, grid);
                 return grid;
             })
