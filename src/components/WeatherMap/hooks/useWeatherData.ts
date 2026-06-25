@@ -7,10 +7,11 @@ import { useEffect, useRef } from 'react';
 import { weatherService } from '../../../services/weatherService';
 import { logApiErrorThrottled } from '../../../services/apiRateLimit';
 import { useWeatherStore } from '../../../store/weatherStore';
+import type { WeatherModelId } from '../../../store/types';
 
 interface Params {
     currentLocation: { lat: number; lon: number } | null;
-    selectedModel: string;
+    selectedModel: WeatherModelId;
 }
 
 export function useWeatherData({ currentLocation, selectedModel }: Params): void {

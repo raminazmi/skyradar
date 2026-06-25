@@ -11,10 +11,11 @@ import { useEffect, useRef, useState } from 'react';
 import { weatherGridService, type WeatherGrid } from '../../../services/weatherGridService';
 import { logApiErrorThrottled } from '../../../services/apiRateLimit';
 import { getStableGridBounds, getForecastGridResolution, type GridBounds } from '../utils/gridBounds';
+import type { WeatherModelId } from '../../../store/types';
 
 interface Params {
     mapBounds: GridBounds | null;
-    selectedModel: string;
+    selectedModel: WeatherModelId;
     currentTimeIndex: number;
 }
 

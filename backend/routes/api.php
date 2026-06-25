@@ -6,6 +6,7 @@ use App\Http\Controllers\Api\SatelliteController;
 use App\Http\Controllers\Api\RadarController;
 use App\Http\Controllers\Api\CycloneController;
 use App\Http\Controllers\Api\WildfireController;
+use App\Http\Controllers\Api\PointController;
 use App\Http\Controllers\WeatherController;
 
 /*
@@ -21,6 +22,8 @@ Route::prefix('v1')->group(function () {
     
     // توقعات الطقس
     Route::get('/forecast', [WeatherController::class, 'forecast'])->name('api.forecast');
+    // توقّعات نقطة من مكعّبات الـ rasters المحلّية — بلا Open-Meteo (مجاني، سريع، بلا 429).
+    Route::get('/point', [PointController::class, 'forecast'])->name('api.point');
     Route::get('/grid', [WeatherController::class, 'grid'])->name('api.grid');
     Route::get('/models', [WeatherController::class, 'availableModels'])->name('api.models');
     Route::get('/models/gfs', [WeatherController::class, 'gfsData'])->name('api.gfs');

@@ -22,6 +22,7 @@ const LAYER_GROUPS: GroupDef[] = [
     { parentId: 'temperature', label: 'درجة الحرارة', variants: [
         { id: 'temperature', label: 'فعلي' },
         { id: 'feels-like', label: 'الإحساس الحراري' },
+        { id: 'wet-bulb', label: 'اللمبة الرطبة' },
     ] },
     { parentId: 'humidity', label: 'الرطوبة', variants: [
         { id: 'humidity', label: 'النسبية' },

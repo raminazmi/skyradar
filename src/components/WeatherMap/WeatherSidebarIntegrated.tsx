@@ -88,14 +88,14 @@ export function WeatherSidebarIntegrated() {
                                 <span className="model-name">GFS</span>
                                 <span className="model-res">25كم</span>
                             </button>
-                            <button
+                            {/* <button
                                 className={`model-btn ${selectedModel === 'ICON' ? 'active' : ''}`}
                                 onClick={() => setSelectedModel('ICON')}
                                 title="DWD ICON Model"
                             >
                                 <span className="model-name">ICON</span>
                                 <span className="model-res">13كم</span>
-                            </button>
+                            </button> */}
                         </div>
                     </div>
 

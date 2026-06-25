@@ -1,4 +1,4 @@
-import { Fragment } from 'react';
+import { Fragment, useEffect, useRef } from 'react';
 import { FiClock, FiDroplet, FiLoader, FiThermometer, FiWind, FiX } from 'react-icons/fi';
 import { weatherService } from '../../services/weatherService';
 import { type WeatherData, useWeatherStore } from '../../store/weatherStore';
@@ -7,6 +7,10 @@ import { WeatherIcon } from './WeatherIcon';
 interface WeatherInfoPanelProps {
     weatherData: WeatherData | null;
     currentTimeIndex: number;
+    /** زمن الـ timeline الفعلي (إيبوك بالثواني) — للمطابقة بالزمن لا بالفهرس. */
+    targetEpoch?: number;
+    /** عدد إطارات الـ timeline — لقصّ النقر ضمن مدى الإطارات المتاحة. */
+    frameCount?: number;
     location: { lat: number; lon: number } | null;
     onRetry?: () => void;
 }
@@ -86,7 +90,13 @@ function formatDayDivider(date: Date, previousDate: Date | null) {
     return null;
 }
 
-export function WeatherInfoPanel({ weatherData, currentTimeIndex, location, onRetry }: WeatherInfoPanelProps) {
+export function WeatherInfoPanel({ weatherData, currentTimeIndex, targetEpoch, frameCount, location, onRetry }: WeatherInfoPanelProps) {
+    const activeRowRef = useRef<HTMLButtonElement | null>(null);
+
+    // تمرير الصف النشط للعرض عند تغيّر زمن الـ timeline (يبقى التظليل مرئياً دائماً).
+    useEffect(() => {
+        activeRowRef.current?.scrollIntoView({ block: 'nearest' });
+    }, [targetEpoch, currentTimeIndex, weatherData]);
     const {
         units,
         selectedModel,
@@ -143,7 +153,19 @@ export function WeatherInfoPanel({ weatherData, currentTimeIndex, location, onRe
         );
     }
 
-    const safeIndex = clamp(currentTimeIndex, 0, times.length - 1);
+    // المطابقة بالزمن الفعلي للـ timeline لا بالفهرس: محورا الزمن مختلفان (raster مربوط بدورة
+    // GFS، وOpen-Meteo يبدأ من منتصف الليل)، فالفهرسة المباشرة كانت تُظهر ساعة/حرارة خاطئة.
+    const safeIndex = (() => {
+        if (targetEpoch === undefined) return clamp(currentTimeIndex, 0, times.length - 1);
+        const targetMs = targetEpoch * 1000;
+        let best = 0;
+        let bestDiff = Infinity;
+        for (let i = 0; i < times.length; i += 1) {
+            const diff = Math.abs(Number(times[i]) * 1000 - targetMs);
+            if (diff < bestDiff) { bestDiff = diff; best = i; }
+        }
+        return best;
+    })();
     const currentDate = new Date(Number(times[safeIndex]) * 1000);
     const currentWeatherCode = weatherData.hourly.weather_code?.[safeIndex] ?? 0;
     const currentWeather = weatherService.decodeWeatherCode(
@@ -199,11 +221,14 @@ export function WeatherInfoPanel({ weatherData, currentTimeIndex, location, onRe
     const humidity = weatherData.hourly.relative_humidity_2m?.[safeIndex];
     const windSpeed = weatherData.hourly.wind_speed_10m?.[safeIndex];
 
-    const rowEnd = Math.min(times.length, safeIndex + 18);
+    // قائمة كاملة مستقرّة: تمرير الـ timeline يحرّك التظليل فقط (لا يقتطع القيم ولا يُخفيها) —
+    // سلوك Zoom Earth. نبدأ من بداية بيانات الموقع ونعرض حتى 48 ساعة.
+    const rowStart = 0;
+    const rowEnd = Math.min(times.length, rowStart + 48);
     const rows = [];
     let previousDate: Date | null = null;
 
-    for (let index = safeIndex; index < rowEnd; index += 1) {
+    for (let index = rowStart; index < rowEnd; index += 1) {
         const rowDate = new Date(Number(times[index]) * 1000);
         const rowWeather = weatherService.decodeWeatherCode(
             weatherData.hourly.weather_code?.[index] ?? 0,
@@ -307,8 +332,15 @@ export function WeatherInfoPanel({ weatherData, currentTimeIndex, location, onRe
                         {row.divider && <div className="weather-panel-day-divider">{row.divider}</div>}
 
                         <button
+                            ref={row.index === safeIndex ? activeRowRef : undefined}
                             className={`weather-panel-row ${row.index === safeIndex ? 'active' : ''}`}
-                            onClick={() => setCurrentTimeIndex(row.index)}
+                            onClick={() => {
+                                // المحوران مختلفان: نحرّك الـ timeline بإزاحة الساعات نفسها بين
+                                // الصف المنقور والصف النشط، مقصوصةً ضمن إطارات الـ timeline.
+                                const delta = row.index - safeIndex;
+                                const maxFrame = frameCount && frameCount > 0 ? frameCount - 1 : currentTimeIndex + delta;
+                                setCurrentTimeIndex(clamp(currentTimeIndex + delta, 0, maxFrame));
+                            }}
                             type="button"
                         >
                             <span className="weather-panel-row-temp">{formatTemperature(row.temperature)}</span>

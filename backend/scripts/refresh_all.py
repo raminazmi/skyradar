@@ -52,10 +52,11 @@ def refresh(vars_list, hours, outdir):
 def write_meta(outdir, hours, run_epoch):
     """يكتب meta.json بزمن الدورة المثبّتة نفسها التي وُلِّدت منها كل الإطارات — فتتطابق
     محاذاة "الآن" في الواجهة تماماً مع بيانات الإطارات (لا انزياح ولا قفزات)."""
-    meta = {'run_epoch': run_epoch, 'hours': max(hours) + 1, 'generated_epoch': int(time.time())}
+    meta = {'run_epoch': run_epoch, 'hours': max(hours) + 1, 'generated_epoch': int(time.time()),
+            'layers': g.list_available_layers(outdir)}
     with open(os.path.join(outdir, 'meta.json'), 'w') as f:
         json.dump(meta, f)
-    print(f"meta.json: run_epoch={run_epoch} hours={meta['hours']}", flush=True)
+    print(f"meta.json: run_epoch={run_epoch} hours={meta['hours']} layers={meta['layers']}", flush=True)
 
 
 def main():
@@ -81,6 +82,32 @@ def main():
     print(f"تحديث {len(vars_list)} متغيّر × {len(hours)} ساعة → {args.outdir}", flush=True)
     failed = refresh(vars_list, hours, args.outdir)
     write_meta(args.outdir, hours, run_epoch)
+
+    # نشتقّ نسيج "الإحساس الحراري" من الحرارة/الرطوبة/الرياح (APTMP غير متاح عبر NOMADS) —
+    # فتسلك طبقة الإحساس نفس مسار الحرارة الفعلية (raster + تطبيع + ألوان + رسم موحّد).
+    try:
+        import derive_feelslike
+        sys.argv = ['derive_feelslike', '--dir', args.outdir, '--hours', args.hours]
+        derive_feelslike.main()
+    except Exception as e:
+        print(f"تعذّر اشتقاق الإحساس الحراري: {e!r}", flush=True)
+
+    # درجة اللمبة الرطبة (Stull) من الحرارة+الرطوبة — طبقة موحّدة المسار مع الحرارة.
+    try:
+        import derive_wetbulb
+        sys.argv = ['derive_wetbulb', '--dir', args.outdir, '--hours', args.hours]
+        derive_wetbulb.main()
+    except Exception as e:
+        print(f"تعذّر اشتقاق اللمبة الرطبة: {e!r}", flush=True)
+
+    # نبني مكعّبات النقطة (point cubes) فور انتهاء النُسج — يستخدمها endpoint /point بلا Open-Meteo.
+    try:
+        import build_cubes
+        sys.argv = ['build_cubes', '--dir', args.outdir, '--downsample', '2']
+        build_cubes.main()
+    except Exception as e:
+        print(f"تعذّر بناء المكعّبات: {e!r}", flush=True)
+
     sys.exit(1 if failed else 0)
 
 

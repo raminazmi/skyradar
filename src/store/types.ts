@@ -31,7 +31,7 @@ export interface WeatherData {
     elevation?: number;
     stale?: boolean;
     providerMessage?: string;
-    model?: 'GFS' | 'ECMWF';
+    model?: WeatherModelId;
     hourly: WeatherHourlyData;
     current?: any;
 }
@@ -50,6 +50,7 @@ export type LayerKey =
     | 'wind-gusts'
     | 'temperature'
     | 'feels-like'
+    | 'wet-bulb'
     | 'pressure'
     | 'humidity'
     | 'dewpoint'
@@ -58,8 +59,10 @@ export type LayerKey =
     | 'hurricanes'
     | 'wildfires';
 
+export type WeatherModelId = 'GFS' | 'ECMWF' | 'ICON';
+
 export interface WeatherModel {
-    id: 'GFS' | 'ECMWF';
+    id: WeatherModelId;
     name: string;
     resolution: string;
 }
@@ -76,8 +79,8 @@ export interface WeatherState {
     setZoomLevel: (zoom: number) => void;
 
     availableModels: WeatherModel[];
-    selectedModel: 'GFS' | 'ECMWF';
-    setSelectedModel: (model: 'GFS' | 'ECMWF') => void;
+    selectedModel: WeatherModelId;
+    setSelectedModel: (model: WeatherModelId) => void;
     initializeModels: () => Promise<void>;
 
     visibleLayers: Record<LayerKey, boolean>;

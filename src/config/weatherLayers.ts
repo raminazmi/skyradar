@@ -18,6 +18,7 @@ export type ForecastGridType =
     | 'precipitation'
     | 'temperature'
     | 'feels-like'
+    | 'wet-bulb'
     | 'pressure'
     | 'humidity'
     | 'dewpoint'
@@ -52,6 +53,7 @@ export const FORECAST_LAYER_IDS: ForecastGridType[] = [
     'precipitation',
     'temperature',
     'feels-like',
+    'wet-bulb',
     'pressure',
     'humidity',
     'dewpoint',
@@ -151,6 +153,24 @@ export const WEATHER_LAYER_CONFIGS: Record<LayerKey, WeatherLayerConfig> = {
         opacity: 0.64,
         updateIntervalMinutes: 60,
     },
+    'wet-bulb': {
+        id: 'wet-bulb',
+        labelAr: 'اللمبة الرطبة',
+        labelEn: 'Wet-bulb temperature',
+        kind: 'forecast-scalar',
+        timeMode: 'forecast',
+        source: 'local',
+        sourceLabel: 'مُشتقّة من الحرارة والرطوبة (GFS/ECMWF)',
+        variables: ['temperature_2m', 'relative_humidity_2m'],
+        unit: 'C',
+        color: '#c81e96',
+        icon: FiThermometer,
+        attribution: 'مُشتقّة محلياً (صيغة Stull) من نُسج NOAA GFS / ECMWF',
+        apiType: 'wet-bulb',
+        descriptionAr: 'درجة حرارة اللمبة الرطبة — مؤشّر إجهاد حراري؛ تجاوز ~31°م خطير و~35°م حدّ بقاء الإنسان.',
+        opacity: 0.66,
+        updateIntervalMinutes: 60,
+    },
     pressure: {
         id: 'pressure',
         labelAr: 'الضغط الجوي',
@@ -171,7 +191,7 @@ export const WEATHER_LAYER_CONFIGS: Record<LayerKey, WeatherLayerConfig> = {
     },
     humidity: {
         id: 'humidity',
-        labelAr: 'الرطوبة',
+        labelAr: 'الرطوبة النسبية',
         labelEn: 'Relative humidity',
         kind: 'forecast-scalar',
         timeMode: 'forecast',

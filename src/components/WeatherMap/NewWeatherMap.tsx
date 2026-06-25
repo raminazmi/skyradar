@@ -55,7 +55,7 @@ const DARK_MAP_STYLE = 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/st
 // على البلاطات؛ والرياح تحتاج قناتي U/V + جسيمات فتُعالَج لاحقاً.)
 // ثابت على مستوى الوحدة كي لا يتغيّر مرجعه كل تصيير فيُعيد اشتراك التشغيل بلا داعٍ.
 const RASTER_TYPES = new Set<string>([
-    'temperature', 'dewpoint', 'humidity', 'pressure', 'clouds', 'wind-gusts', 'precipitation',
+    'temperature', 'feels-like', 'wet-bulb', 'dewpoint', 'humidity', 'pressure', 'clouds', 'wind-gusts', 'precipitation',
 ]);
 
 // ─── Main Component ───────────────────────────────────────────────────────────
@@ -88,11 +88,14 @@ export function NewWeatherMap() {
         return heatmapTypes.find((t) => visibleLayers[t]) ?? null;
     }, [visibleLayers]);
 
-    // نُسج خام متاحة لكِلا النموذجين: GFS (NOAA) في rasters/، و ECMWF (IFS) في rasters/ecmwf/.
-    // التبديل يغيّر مجلّد النسيج فعلياً → بيانات نموذج مختلف، بلا أي طلبات Open-Meteo (لا 429).
-    const rasterDir = selectedModel === 'ECMWF' ? 'rasters/ecmwf/' : 'rasters/';
+    // نُسج خام متاحة للنماذج الثلاثة: GFS (NOAA) في rasters/، ECMWF (IFS) في rasters/ecmwf/،
+    // و ICON (DWD) في rasters/icon/. التبديل يغيّر مجلّد النسيج فعلياً → بيانات نموذج مختلف،
+    // بلا أي طلبات Open-Meteo (لا 429).
+    const rasterDir = selectedModel === 'ECMWF' ? 'rasters/ecmwf/'
+        : selectedModel === 'ICON' ? 'rasters/icon/'
+        : 'rasters/';
     const useRaster = !!activeHeatmapType && RASTER_TYPES.has(activeHeatmapType)
-        && (selectedModel === 'GFS' || selectedModel === 'ECMWF');
+        && (selectedModel === 'GFS' || selectedModel === 'ECMWF' || selectedModel === 'ICON');
 
     // حقل الرياح من النسيج المحلّي (R=سرعة، G/B=U/V) — يغذّي الجسيمات وطبقة لون الرياح
     // وتلميح الرياح بلا Open-Meteo، ويتبع مجلّد النموذج المختار.
@@ -133,8 +136,9 @@ export function NewWeatherMap() {
         return () => { cancelled = true; };
     }, [rasterDir]);
 
-    // زمن صلاحية الإطار i = زمن الدورة + i ساعة. بلا meta: نبدأ من الساعة الحالية.
-    const runEpoch = rasterMeta?.run_epoch ?? Math.floor(Date.now() / 3_600_000) * 3600;
+    // زمن صلاحية الإطار i = زمن الدورة + i ساعة. بلا meta: نبدأ من أقرب ساعة للزمن الحالي
+    // (تقريب لا تقليل) كي يكون الإطار 0 = "الآن" تماماً، لا "قبل ساعة" (بداية الساعة الحالية).
+    const runEpoch = rasterMeta?.run_epoch ?? Math.round(Date.now() / 3_600_000) * 3600;
     const frameHours = rasterMeta?.hours ?? 25;
     const forecastTimes = useMemo(
         () => Array.from({ length: frameHours }, (_, i) => runEpoch + i * 3600),
@@ -148,15 +152,32 @@ export function NewWeatherMap() {
         return Math.max(0, Math.min(rasterMeta.hours - 1, idx));
     }, [rasterMeta]);
 
-    // نفتح على إطار "الآن" مرّة واحدة عند وصول meta.
-    const nowFrameRef = useRef(false);
+    // نُعيد ضبط الشريط على إطار "الآن" عند كل تبديل نموذج (تغيّر rasterDir) وعند وصول meta
+    // الجديد. مهمّ أن يعمل حتى بلا meta: في حالة السقوط (runEpoch = الساعة الحالية) يكون
+    // nowFrameIndex = 0 = الآن، فلا يبقى المؤشّر على إزاحة النموذج السابق (مثل +7 ساعات).
     useEffect(() => {
-        if (!rasterMeta || nowFrameRef.current) return;
         setCurrentTimeIndex(nowFrameIndex);
-        nowFrameRef.current = true;
-    }, [rasterMeta, nowFrameIndex, setCurrentTimeIndex]);
+    }, [rasterDir, rasterMeta, nowFrameIndex, setCurrentTimeIndex]);
 
     useAutoplay({ isPlaying, playbackSpeed, frameCount: forecastTimes.length, canAdvance: playbackCanAdvance, homeIndex: nowFrameIndex });
+
+    // تحميل مُسبق لإطارات النسيج المجاورة (الطبقة الفعّالة + الرياح) فتظهر فوراً عند تغيّر
+    // الوقت/التشغيل بلا تأخّر تنزيل/فكّ. نعتمد كاش المتصفح: مجرّد إنشاء Image يكفي للإحماء.
+    useEffect(() => {
+        const dir = `${import.meta.env.BASE_URL}${rasterDir}`;
+        const ahead = isPlaying ? 8 : 4;
+        const types: string[] = [];
+        if (useRaster && activeHeatmapType) types.push(activeHeatmapType);
+        if (visibleLayers.wind) types.push('wind');
+        for (const type of types) {
+            for (let d = -1; d <= ahead; d += 1) {
+                const idx = currentTimeIndex + d;
+                if (idx < 0 || idx >= frameHours) continue;
+                const img = new Image();
+                img.src = `${dir}${type}_${String(idx).padStart(3, '0')}.png`;
+            }
+        }
+    }, [rasterDir, useRaster, activeHeatmapType, visibleLayers.wind, currentTimeIndex, isPlaying, frameHours]);
 
     // قاعدة الخريطة تتبع الطبقة الفعّالة (Zoom Earth): الحرارة على قاعدة فاتحة فستقية،
     // الرياح/الأمطار على قاعدة داكنة — بغضّ النظر عن مفتاح الوضع الداكن العام للواجهة.
@@ -241,7 +262,7 @@ export function NewWeatherMap() {
                                 id="weather-heatmap-scalar"
                                 url={`${import.meta.env.BASE_URL}${rasterDir}${activeHeatmapType}_${String(currentTimeIndex).padStart(3, '0')}.png`}
                                 type={activeHeatmapType}
-                                opacity={0.92}
+                                opacity={activeHeatmapType === 'clouds' ? 0.6 : activeHeatmapType === 'precipitation' ? 0.85 : 0.98}
                             />
                         )}
 
@@ -300,6 +321,8 @@ export function NewWeatherMap() {
                         <WeatherInfoPanel
                             weatherData={weatherData}
                             currentTimeIndex={currentTimeIndex}
+                            targetEpoch={forecastTimes[currentTimeIndex] ?? forecastTimes[0]}
+                            frameCount={forecastTimes.length}
                             location={currentLocation}
                             onRetry={() => currentLocation && setCurrentLocation(currentLocation.lat, currentLocation.lon)}
                         />

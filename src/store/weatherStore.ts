@@ -19,11 +19,13 @@ export const useWeatherStore = create<WeatherState>((set) => ({
     zoomLevel: 4,
     setZoomLevel: (zoom) => set({ zoomLevel: zoom }),
 
-    // نموذجان عالميان لهما raster مُولَّد على السيرفر (GFS من NOAA، ECMWF IFS من open data).
-    // ICON أُزيل: شبكته icosahedral تحتاج إعادة تشبيك غير عملية على الاستضافة المشتركة.
+    // ثلاثة نماذج عالمية لها raster مُولَّد على السيرفر: GFS (NOAA)، ECMWF IFS (open data)،
+    // و ICON (DWD opendata، يُعاد تشبيكه من الشبكة icosahedral إلى lat/lon منتظمة عبر فهرس
+    // أقرب-جار مُخزَّن لمرّة واحدة — راجع backend/scripts/icon_to_raster.py).
     availableModels: [
         { id: 'GFS', name: 'GFS', resolution: '22 كم' },
         { id: 'ECMWF', name: 'ECMWF', resolution: '9 كم' },
+        // { id: 'ICON', name: 'ICON', resolution: '13 كم' },
     ],
     selectedModel: 'GFS',
     setSelectedModel: (model) => set({ selectedModel: model }),
@@ -38,6 +40,7 @@ export const useWeatherStore = create<WeatherState>((set) => ({
         'wind-gusts': false,
         temperature: false,
         'feels-like': false,
+        'wet-bulb': false,
         pressure: false,
         humidity: false,
         dewpoint: false,

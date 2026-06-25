@@ -142,10 +142,11 @@ def _write_meta(outdir, hours):
         run_epoch = int(dt.timestamp())
     except Exception:
         run_epoch = int(datetime.datetime.now(datetime.timezone.utc).timestamp())
-    meta = {'run_epoch': run_epoch, 'hours': max(hours) + 1, 'generated_epoch': int(time.time())}
+    meta = {'run_epoch': run_epoch, 'hours': max(hours) + 1, 'generated_epoch': int(time.time()),
+            'layers': g.list_available_layers(outdir)}
     with open(os.path.join(outdir, 'meta.json'), 'w') as f:
         json.dump(meta, f)
-    print(f"meta.json: run_epoch={run_epoch} hours={meta['hours']}", flush=True)
+    print(f"meta.json: run_epoch={run_epoch} hours={meta['hours']} layers={meta['layers']}", flush=True)
 
 
 if __name__ == '__main__':

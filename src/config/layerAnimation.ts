@@ -98,6 +98,7 @@ export const LAYER_PRESENTATION: Record<LayerKey, LayerPresentationConfig> = {
     ),
     temperature: scalarLayer(1.0, 'خريطة الحرارة — جسيمات الرياح البيضاء تظهر فوقها توضيحاً لحركة الرياح.'),
     'feels-like': scalarLayer(1.0, 'الإحساس الحراري — جسيمات الرياح البيضاء تظهر فوق الخريطة.'),
+    'wet-bulb': scalarLayer(1.0, 'درجة اللمبة الرطبة — جسيمات الرياح البيضاء تظهر فوق الخريطة.'),
     pressure: scalarLayer(
         1.0,
         'الضغط الجوي — جسيمات الرياح تتبع خطوط الضغط المتساوية بشكل طبيعي.'

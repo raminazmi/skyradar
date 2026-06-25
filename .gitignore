@@ -9,6 +9,11 @@ build/
 
 # Generated weather raster tiles (produced on the server by gfs_to_raster.py)
 public/rasters/
+backend/public/rasters/
+
+# Python bytecode
+__pycache__/
+*.py[cod]
 
 # Env files
 .env

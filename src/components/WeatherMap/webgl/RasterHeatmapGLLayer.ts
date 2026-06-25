@@ -32,6 +32,9 @@ uniform vec4 u_bounds;
 const float PI = 3.141592653589793;
 float mercV(float latDeg){ float lat=radians(latDeg); return (1.0 - log(tan(PI*0.25+lat*0.5))/PI)*0.5; }
 float isLand(vec2 m){ return texture2D(u_mask, m).r > 0.5 ? 1.0 : 0.0; }
+// نواة تنعيم غاوسية: نطابق مظهر Zoom Earth الناعم بمتوسّط حقل أوسع بدل عيّنة/خليتين حادّتين.
+// SMOOTH_SIGMA² يضبط شدّة النعومة (أكبر = أنعم). يبقى وعي البر/البحر فلا تتلطّخ السواحل.
+const float SMOOTH_SIGMA2 = 1.1;
 void main() {
     float lng = v_merc.x * 360.0 - 180.0;
     float latRad = 2.0 * atan(exp(PI * (1.0 - 2.0 * v_merc.y))) - PI * 0.5;
@@ -39,22 +42,34 @@ void main() {
     float u = (lng - u_bounds.x) / (u_bounds.z - u_bounds.x);
     float v = (lat - u_bounds.y) / (u_bounds.w - u_bounds.y);
     if (u < 0.0 || u > 1.0 || v < 0.0 || v > 1.0) discard;
+    vec2 gs = u_gridSize;
+    vec2 texel = 1.0 / gs;
+
+    // المسار البسيط (طبقات بلا قناع): تضبيب غاوسي 3×3 خفيف.
     if (u_useMask < 0.5) {
-        gl_FragColor = texture2D(u_ramp, vec2(texture2D(u_value, vec2(u, v)).r, 0.5)) * u_opacity;
+        float vs = 0.0, ws = 0.0;
+        for (int j=-1;j<=1;j++){ for (int i=-1;i<=1;i++){
+            float w = exp(-0.5 * float(i*i + j*j) / SMOOTH_SIGMA2);
+            vec2 cuv = clamp(vec2(u,v) + vec2(float(i),float(j))*texel, vec2(0.0), vec2(1.0));
+            vs += texture2D(u_value, cuv).r * w; ws += w;
+        }}
+        gl_FragColor = texture2D(u_ramp, vec2(vs/ws, 0.5)) * u_opacity;
         return;
     }
+
+    // مسار القناع الساحلي: نواة 4×4 موزونة غاوسياً × عامل البر/البحر (نعومة Zoom Earth مع حفظ السواحل).
     float pixelLand = isLand(vec2(v_merc.x, v_merc.y));
-    vec2 gs = u_gridSize;
-    float fx = u*gs.x - 0.5, fy = v*gs.y - 0.5;
-    float x0 = floor(fx), y0 = floor(fy);
-    float dx = fx - x0, dy = fy - y0;
+    float sx = u*gs.x, sy = v*gs.y;
+    float cx0 = floor(sx - 0.5), cy0 = floor(sy - 0.5);
     float valSum = 0.0, wSum = 0.0;
-    for (int j=0;j<2;j++){ for (int i=0;i<2;i++){
-        vec2 cuv = clamp(vec2((x0+float(i)+0.5)/gs.x,(y0+float(j)+0.5)/gs.y), vec2(0.0), vec2(1.0));
-        float bw = (i==0?(1.0-dx):dx) * (j==0?(1.0-dy):dy);
+    for (int j=-1;j<=2;j++){ for (int i=-1;i<=2;i++){
+        float cx = cx0 + float(i), cy = cy0 + float(j);
+        float dxk = sx - (cx + 0.5), dyk = sy - (cy + 0.5);
+        float gw = exp(-0.5 * (dxk*dxk + dyk*dyk) / SMOOTH_SIGMA2);
+        vec2 cuv = clamp(vec2((cx+0.5)/gs.x,(cy+0.5)/gs.y), vec2(0.0), vec2(1.0));
         float sLon = u_bounds.x + cuv.x*(u_bounds.z-u_bounds.x);
         float sLat = u_bounds.y + cuv.y*(u_bounds.w-u_bounds.y);
-        float w = bw * ((isLand(vec2((sLon+180.0)/360.0, mercV(sLat))) == pixelLand) ? 1.0 : 0.04);
+        float w = gw * ((isLand(vec2((sLon+180.0)/360.0, mercV(sLat))) == pixelLand) ? 1.0 : 0.04);
         valSum += texture2D(u_value, cuv).r * w; wSum += w;
     }}
     if (wSum <= 0.0) discard;
@@ -175,6 +190,7 @@ export class RasterHeatmapGLLayer implements CustomLayerInterface {
         gl.uniform2f(this.loc.uniforms.u_gridSize, this.valueSize[0], this.valueSize[1]);
         gl.uniform1f(this.loc.uniforms.u_opacity, this.opacity);
         const coastal = this.layerType === 'temperature' || this.layerType === 'feels-like'
+            || this.layerType === 'wet-bulb'
             || this.layerType === 'dewpoint' || this.layerType === 'humidity';
         gl.uniform1f(this.loc.uniforms.u_useMask, this.maskReady && coastal ? 1 : 0);
 

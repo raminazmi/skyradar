@@ -278,7 +278,7 @@ export class ParticleGLLayer implements CustomLayerInterface {
         // الجسيمات (وذيلها) بيضاء دائماً مثل Zoom Earth — لا تتغيّر مع الوضع الفاتح/الداكن.
         // على القاعدة الفاتحة نكبّر الحجم ونرفع الشفافية قليلاً لتبقى واضحة فوق الألوان الفاتحة.
         const lightBase = !this.darkMode;
-        gl.uniform1f(this.drawLoc.uniforms.u_point_size, lightBase ? 3.7 : 3.2);
+        gl.uniform1f(this.drawLoc.uniforms.u_point_size, lightBase ? 2.6 : 2.2);
         gl.uniform1f(this.drawLoc.uniforms.u_alpha,
             lightBase ? Math.min(1.0, this.settings.opacity * 1.2) : this.settings.opacity);
         gl.uniform3f(this.drawLoc.uniforms.u_color, 1.0, 1.0, 1.0);

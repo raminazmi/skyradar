@@ -17,9 +17,14 @@ export function LegendBar() {
         temperature: {
             title: units.temperature === 'celsius' ? 'درجة الحرارة (°م)' : 'درجة الحرارة (°ف)',
             gradient: 'linear-gradient(to right, #781487, #3046b9, #2db2dc, #78dac6, #b6e480, #f2d84e, #f8b442, #f08430, #d22828, #821230)',
-            labels: units.temperature === 'celsius' 
+            labels: units.temperature === 'celsius'
                 ? ['-40', '-20', '0', '10', '20', '30', '40', '50']
                 : ['-40', '-4', '32', '50', '68', '86', '104', '122']
+        },
+        'wet-bulb': {
+            title: 'اللمبة الرطبة (°م)',
+            gradient: 'linear-gradient(to right, #f6f5e0, #faf2aa, #fadd6e, #f9c65a, #f59f46, #f0773a, #e44632, #c3232d, #a0142d, #780a28)',
+            labels: ['0', '5', '10', '15', '20', '25', '30', '35', '40']
         },
         precipitation: {
             title: units.precipitation === 'mm' ? 'الأمطار (مم/ساعة)' : 'الأمطار (إنش/ساعة)',

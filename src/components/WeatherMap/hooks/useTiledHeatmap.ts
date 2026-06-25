@@ -1,4 +1,4 @@
-/**
+﻿/**
  * useTiledHeatmap.ts
  * يجلب بلاطات الطبقة العددية الفعّالة (حرارة/…) كلٌّ على حدة بالتوازي، ويُخزّنها لكل بلاطة،
  * ويُصدر البلاطات الجاهزة تدريجياً (مربّعاً مربّعاً) — جوهر سلوك Zoom Earth.
@@ -12,6 +12,7 @@ import { weatherGridService, type WeatherGrid } from '../../../services/weatherG
 import { getVisibleTiles, TILE_RES } from '../../../services/weatherTiles';
 import type { ForecastGridType } from '../../../config/weatherLayers';
 import type { GridBounds } from '../utils/gridBounds';
+import type { WeatherModelId } from '../../../store/types';
 
 export interface ReadyTile { key: string; grid: WeatherGrid; }
 
@@ -34,7 +35,7 @@ export function useTiledHeatmap({ mapBounds, mapZoom, selectedModel, currentTime
         if (!mapBounds || !activeType) { setReady([]); return; }
 
         const id = ++reqRef.current;
-        const model = selectedModel as 'GFS' | 'ECMWF';
+        const model = selectedModel as WeatherModelId;
         const tiles = getVisibleTiles(mapBounds, mapZoom);
         const dataKey = (tileKey: string) => `${activeType}_${model}_${currentTimeIndex}_${tileKey}`;
         const visibleKeys = new Set(tiles.map((t) => t.key));

@@ -110,8 +110,15 @@ export function styleWeatherBase(map: MaplibreMap, darkMode: boolean, activeLaye
     // تمتزج فوق هذه القاعدة فتظهر غنيّة ودقيقة (فوق الأبيض كانت تبهت). الماء بأزرق فاتح خفيف.
     // قاعدة فستقية مُوحَّدة (يابسة + بحر + خلفية) في الوضع الفاتح كـ Zoom Earth — فحيث لم
     // تصل بلاطات الحرارة بعد، تبقى الخريطة فستقية لا زرقاء/داكنة. الداكن للرياح/الأمطار.
-    // القاعدة الفاتحة فستقية افتراضياً؛ لطبقة الضغط رمادي فاتح محايد.
-    const lightTone = activeLayer === 'pressure' ? '#e8e6e2' : '#cedb9c';
+    // القاعدة الفاتحة فستقية افتراضياً؛ لطبقة الضغط رمادي فاتح محايد؛ ولطبقتَي الرطوبة
+    // ونقطة الندى قاعدة أصفر-أخضر فاتحة (مطابقة Zoom Earth) فتبرز تدرّجاتهما — من البنّي
+    // الجاف إلى الأزرق المشبع — بوضوح ومنطقية فوقها بدل أن تبهت على الفستقي الداكن.
+    const isHumidityBase = activeLayer === 'humidity' || activeLayer === 'dewpoint';
+    const lightTone = activeLayer === 'pressure'
+        ? '#e8e6e2'
+        : isHumidityBase
+            ? '#dde7a0'
+            : '#cedb9c';
     // طبقتا الرياح/الهبّات على قاعدة داكنة لكن بلون أزرق بنفسجي (بدل الأسود) لإبراز الجسيمات.
     const isWindBase = activeLayer === 'wind' || activeLayer === 'wind-gusts';
     const windTone = '#514aa8';

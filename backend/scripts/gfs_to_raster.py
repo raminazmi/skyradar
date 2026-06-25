@@ -230,6 +230,25 @@ def generate_one(cfg, var, hour, out_path):
     print(f"تمّ: {out_path} ({label}, min={float(arr.min()):.1f} max={float(arr.max()):.1f})", flush=True)
 
 
+# أنواع الطبقات التي قد تظهر في الواجهة (FORECAST_LAYER_IDS) — نفحص وجود إطارها الأول
+# (f000) في مجلّد المخرجات لنُدرج فقط ما وُلِّد فعلاً (بما فيه المشتقّ: feels-like/wet-bulb).
+FORECAST_LAYER_IDS = [
+    'wind', 'wind-gusts', 'precipitation', 'temperature', 'feels-like',
+    'wet-bulb', 'pressure', 'humidity', 'dewpoint', 'clouds',
+]
+
+
+def list_available_layers(outdir):
+    """يعيد قائمة أنواع الطبقات التي لها نسيج f000 مولَّد فعلاً في المجلّد — تكتبها كل
+    سكربتات النماذج في meta.json كي تُظهر الواجهة فقط الطبقات العاملة لكل نموذج.
+    feels-like/wet-bulb يُشتقّان لاحقاً (بعد كتابة meta) من الحرارة والرطوبة، فنُدرجهما
+    استباقياً متى توفّر مدخلاهما كي لا تسقطهما فجوة التوقيت."""
+    present = {t for t in FORECAST_LAYER_IDS if os.path.exists(os.path.join(outdir, f"{t}_000.png"))}
+    if 'temperature' in present and 'humidity' in present:
+        present.update({'feels-like', 'wet-bulb'})
+    return [t for t in FORECAST_LAYER_IDS if t in present]
+
+
 def parse_hours(spec):
     """يقبل '0' أو '0-24' أو '0,3,6'."""
     if '-' in spec:

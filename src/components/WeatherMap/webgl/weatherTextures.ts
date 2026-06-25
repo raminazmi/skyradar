@@ -21,6 +21,7 @@ import type { WeatherGrid } from '../../../services/weatherGridService';
 export const VALUE_RANGES: Record<ForecastGridType, [number, number]> = {
     'temperature': [-50, 55],
     'feels-like':  [-50, 55],
+    'wet-bulb':    [-40, 40],
     'dewpoint':    [-35, 35],
     'wind':        [0, 120],
     'wind-gusts':  [0, 160],

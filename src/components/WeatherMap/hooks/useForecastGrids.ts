@@ -1,4 +1,4 @@
-/**
+﻿/**
  * useForecastGrids.ts
  * يدير شبكتي الرياح والهيتماب (جلب/كاش/prefetch) حسب الطبقة الفعّالة وحدود الخريطة.
  * يُرجع الشبكات الجاهزة للعرض. مُستخرَج من NewWeatherMap لإبقائه < 300 سطر.
@@ -9,10 +9,11 @@ import { weatherGridService, type WeatherGrid } from '../../../services/weatherG
 import { logApiErrorThrottled } from '../../../services/apiRateLimit';
 import { FORECAST_LAYER_IDS, type ForecastGridType } from '../../../config/weatherLayers';
 import { getStableGridBounds, getForecastGridResolution, chooseDisplayGrid, type GridBounds } from '../utils/gridBounds';
+import type { WeatherModelId } from '../../../store/types';
 
 interface Params {
     mapBounds: GridBounds | null;
-    selectedModel: 'GFS' | 'ECMWF';
+    selectedModel: WeatherModelId;
     currentTimeIndex: number;
     isPlaying: boolean;
     visibleLayers: Record<string, boolean>;
