@@ -11,6 +11,12 @@ build/
 public/rasters/
 backend/public/rasters/
 
+# ICON local index build artifacts — لا تُرفع (ملف شبكة DWD الكبير + مجلّد العمل + الفهرس)
+icon_build/
+*.nc
+*.nc.bz2
+icon_nn_index_*.npy
+
 # Python bytecode
 __pycache__/
 *.py[cod]

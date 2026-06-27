@@ -100,27 +100,20 @@ def _lonlat_to_xyz(lon_deg, lat_deg):
 
 
 def build_or_load_index(sample_grib, cache_dir):
-    """يبني (أو يحمّل) فهرس أقرب-جار من خلايا ICON إلى شبكة الهدف المنتظمة.
-    الفهرس مصفوفة int32 طولها NLAT*NLON يعيّن لكل نقطة هدف رقم خلية ICON الأقرب."""
+    """يحمّل فهرس أقرب-جار المخزَّن (icon_nn_index_<ncells>_<W>x<H>.npy). ملفات ICON العالمية
+    icosahedral *لا تحمل إحداثياتها* (مؤكَّد: gridType=unstructured_grid، لا latitudes في
+    eccodes)، فلا يمكن بناء الفهرس من ملف البيانات هنا. يُبنى مرّة على جهاز فيه ملف شبكة DWD
+    عبر build_icon_index.py ويُرفع الـ .npy (~4MB) إلى مجلّد المخرجات. ncells = طول مصفوفة القيم."""
     ds = g._open_grib(sample_grib)
-    clat = np.asarray(ds['latitude'].values, dtype=np.float64).ravel()
-    clon = np.asarray(ds['longitude'].values, dtype=np.float64).ravel()
-    ncells = clat.size
+    ncells = np.asarray(ds[list(ds.data_vars)[0]].values).size
 
     cache = os.path.join(cache_dir, f"icon_nn_index_{ncells}_{NLON}x{NLAT}.npy")
     if os.path.exists(cache):
         return np.load(cache)
-
-    print(f"بناء فهرس إعادة التشبيك ({ncells} خلية → {NLON}×{NLAT}) — مرّة واحدة…", flush=True)
-    from scipy.spatial import cKDTree
-    tree = cKDTree(_lonlat_to_xyz(clon, clat))
-    lon_grid, lat_grid = np.meshgrid(TARGET_LONS, TARGET_LATS)   # (NLAT, NLON)
-    _, idx = tree.query(_lonlat_to_xyz(lon_grid.ravel(), lat_grid.ravel()), k=1)
-    idx = idx.astype(np.int32)
-    os.makedirs(cache_dir, exist_ok=True)
-    np.save(cache, idx)
-    print(f"تمّ حفظ الفهرس: {cache}", flush=True)
-    return idx
+    raise RuntimeError(
+        f"فهرس إعادة التشبيك غير موجود: {cache}\n"
+        f"ابنِه مرّة عبر backend/scripts/build_icon_index.py (يحتاج ملف شبكة DWD + scipy + netCDF4)\n"
+        f"ثم ارفع الـ .npy إلى مجلّد المخرجات. (الإحداثيات غير متاحة في ملف ICON نفسه.)")
 
 
 _INDEX = None  # يُملأ عند أول حقل
