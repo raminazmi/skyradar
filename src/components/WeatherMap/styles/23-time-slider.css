@@ -10,6 +10,14 @@
     flex-direction: column;
     align-items: center;
     gap: 6px;
+    /* الحاوية عريضة (1000px) وشفّافة بصرياً لكنها كانت تبتلع نقرات ما تحتها (مثل زرّ ICON
+       الأيسر في مبدّل النماذج). نجعلها شفّافة للنقر، ونُعيد التفاعل لعناصرها الفعلية فقط. */
+    pointer-events: none;
+}
+.time-slider-track-shell,
+.slider-track,
+.zoom-time-controller {
+    pointer-events: auto;
 }
 
 .time-slider-track-shell {
@@ -214,7 +222,9 @@
     right: 16px;
     left: auto;
     transform: none;
-    z-index: 600;
+    /* فوق حاوية شريط الوقت (z-index 600) كي تبقى أزراره (وأقصاها ICON الأيسر) قابلة للنقر
+       حتى حين تتداخل مع الحاوية العريضة المتمركزة على الشاشات الأضيق. */
+    z-index: 700;
     display: flex;
     gap: 6px;
     justify-content: center;
