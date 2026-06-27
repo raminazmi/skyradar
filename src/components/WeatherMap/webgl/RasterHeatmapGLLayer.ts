@@ -19,47 +19,37 @@ varying vec2 v_merc;
 void main() { v_merc = a_pos; gl_Position = u_matrix * vec4(a_pos, 0.0, 1.0); }`;
 
 // مطابق لشيدر HeatmapGLLayer (قناع ساحلي) — أي تعديل لوني يبقى متوافقاً معه.
+// يدعم الاستيفاء الزمني: يأخذ القيمة المنعّمة من إطارين (u_value, u_value2) ويمزجهما بـ u_blend
+// قبل تمريرها لشريط الألوان — حركة ناعمة بين الساعات مثل Zoom Earth، بلا بيانات جديدة.
 const FRAGMENT_SRC = `
 precision highp float;
 varying vec2 v_merc;
 uniform sampler2D u_value;
+uniform sampler2D u_value2;
 uniform sampler2D u_ramp;
 uniform sampler2D u_mask;
 uniform float u_useMask;
+uniform float u_blend;
 uniform vec2 u_gridSize;
 uniform float u_opacity;
 uniform vec4 u_bounds;
 const float PI = 3.141592653589793;
+const float SMOOTH_SIGMA2 = 1.1;
 float mercV(float latDeg){ float lat=radians(latDeg); return (1.0 - log(tan(PI*0.25+lat*0.5))/PI)*0.5; }
 float isLand(vec2 m){ return texture2D(u_mask, m).r > 0.5 ? 1.0 : 0.0; }
-// نواة تنعيم غاوسية: نطابق مظهر Zoom Earth الناعم بمتوسّط حقل أوسع بدل عيّنة/خليتين حادّتين.
-// SMOOTH_SIGMA² يضبط شدّة النعومة (أكبر = أنعم). يبقى وعي البر/البحر فلا تتلطّخ السواحل.
-const float SMOOTH_SIGMA2 = 1.1;
-void main() {
-    float lng = v_merc.x * 360.0 - 180.0;
-    float latRad = 2.0 * atan(exp(PI * (1.0 - 2.0 * v_merc.y))) - PI * 0.5;
-    float lat = degrees(latRad);
-    float u = (lng - u_bounds.x) / (u_bounds.z - u_bounds.x);
-    float v = (lat - u_bounds.y) / (u_bounds.w - u_bounds.y);
-    if (u < 0.0 || u > 1.0 || v < 0.0 || v > 1.0) discard;
-    vec2 gs = u_gridSize;
-    vec2 texel = 1.0 / gs;
 
-    // المسار البسيط (طبقات بلا قناع): تضبيب غاوسي 3×3 خفيف.
+// القيمة المنعّمة لإطار واحد عند (uv). يعيد سالباً لو لا وزن (يُستخدم للتجاهل).
+float smoothVal(sampler2D tex, vec2 uv, vec2 gs, vec2 texel, float pixelLand) {
     if (u_useMask < 0.5) {
         float vs = 0.0, ws = 0.0;
         for (int j=-1;j<=1;j++){ for (int i=-1;i<=1;i++){
             float w = exp(-0.5 * float(i*i + j*j) / SMOOTH_SIGMA2);
-            vec2 cuv = clamp(vec2(u,v) + vec2(float(i),float(j))*texel, vec2(0.0), vec2(1.0));
-            vs += texture2D(u_value, cuv).r * w; ws += w;
+            vec2 cuv = clamp(uv + vec2(float(i),float(j))*texel, vec2(0.0), vec2(1.0));
+            vs += texture2D(tex, cuv).r * w; ws += w;
         }}
-        gl_FragColor = texture2D(u_ramp, vec2(vs/ws, 0.5)) * u_opacity;
-        return;
+        return vs / ws;
     }
-
-    // مسار القناع الساحلي: نواة 4×4 موزونة غاوسياً × عامل البر/البحر (نعومة Zoom Earth مع حفظ السواحل).
-    float pixelLand = isLand(vec2(v_merc.x, v_merc.y));
-    float sx = u*gs.x, sy = v*gs.y;
+    float sx = uv.x*gs.x, sy = uv.y*gs.y;
     float cx0 = floor(sx - 0.5), cy0 = floor(sy - 0.5);
     float valSum = 0.0, wSum = 0.0;
     for (int j=-1;j<=2;j++){ for (int i=-1;i<=2;i++){
@@ -70,10 +60,30 @@ void main() {
         float sLon = u_bounds.x + cuv.x*(u_bounds.z-u_bounds.x);
         float sLat = u_bounds.y + cuv.y*(u_bounds.w-u_bounds.y);
         float w = gw * ((isLand(vec2((sLon+180.0)/360.0, mercV(sLat))) == pixelLand) ? 1.0 : 0.04);
-        valSum += texture2D(u_value, cuv).r * w; wSum += w;
+        valSum += texture2D(tex, cuv).r * w; wSum += w;
     }}
-    if (wSum <= 0.0) discard;
-    gl_FragColor = texture2D(u_ramp, vec2(valSum/wSum, 0.5)) * u_opacity;
+    return wSum > 0.0 ? valSum / wSum : -1.0;
+}
+
+void main() {
+    float lng = v_merc.x * 360.0 - 180.0;
+    float latRad = 2.0 * atan(exp(PI * (1.0 - 2.0 * v_merc.y))) - PI * 0.5;
+    float lat = degrees(latRad);
+    float u = (lng - u_bounds.x) / (u_bounds.z - u_bounds.x);
+    float v = (lat - u_bounds.y) / (u_bounds.w - u_bounds.y);
+    if (u < 0.0 || u > 1.0 || v < 0.0 || v > 1.0) discard;
+    vec2 gs = u_gridSize;
+    vec2 texel = 1.0 / gs;
+    float pixelLand = isLand(vec2(v_merc.x, v_merc.y));
+
+    float a = smoothVal(u_value, vec2(u,v), gs, texel, pixelLand);
+    if (a < 0.0) discard;
+    float val = a;
+    if (u_blend > 0.001) {                         // مزج زمني مع الإطار التالي
+        float b = smoothVal(u_value2, vec2(u,v), gs, texel, pixelLand);
+        if (b >= 0.0) val = mix(a, b, u_blend);
+    }
+    gl_FragColor = texture2D(u_ramp, vec2(val, 0.5)) * u_opacity;
 }`;
 
 const LAT_LIMIT = 85.051129;
@@ -88,16 +98,20 @@ export class RasterHeatmapGLLayer implements CustomLayerInterface {
     private loc: ReturnType<typeof getLocations> | null = null;
     private quadBuffer: WebGLBuffer | null = null;
     private valueTexture: WebGLTexture | null = null;
+    private valueTexture2: WebGLTexture | null = null;   // الإطار التالي (للاستيفاء الزمني)
     private rampTexture: WebGLTexture | null = null;
     private maskTexture: WebGLTexture | null = null;
     private maskReady = false;
     private valueReady = false;
+    private valueReady2 = false;
     private destroyed = false;
     private valueSize: [number, number] = [1440, 721];
 
     private layerType: ForecastGridType;
     private opacity: number;
     private url: string;
+    private url2 = '';
+    private blend = 0;
     private rampDirty = true;
 
     constructor(id: string, layerType: ForecastGridType, url: string, opacity = 0.9) {
@@ -108,6 +122,13 @@ export class RasterHeatmapGLLayer implements CustomLayerInterface {
     }
 
     setUrl(url: string) { if (url !== this.url) { this.url = url; if (this.map) this.loadValue(this.mapGL()); } }
+    // الإطار التالي ونسبة المزج للاستيفاء الزمني. blend=0 → الإطار الحالي فقط.
+    setNextUrl(url: string) {
+        if (url === this.url2) return;
+        this.url2 = url;
+        if (this.map && url) this.loadValue2(this.mapGL());
+    }
+    setBlend(b: number) { const nb = Math.max(0, Math.min(1, b)); if (nb !== this.blend) { this.blend = nb; this.map?.triggerRepaint(); } }
     setType(t: ForecastGridType) { if (t !== this.layerType) { this.layerType = t; this.rampDirty = true; this.map?.triggerRepaint(); } }
     setOpacity(o: number) { this.opacity = o; this.map?.triggerRepaint(); }
 
@@ -119,9 +140,10 @@ export class RasterHeatmapGLLayer implements CustomLayerInterface {
         this.glRef = gl;
         this.program = createProgram(gl, VERTEX_SRC, FRAGMENT_SRC);
         this.loc = getLocations(gl, this.program, ['a_pos'],
-            ['u_matrix', 'u_value', 'u_ramp', 'u_mask', 'u_useMask', 'u_gridSize', 'u_opacity', 'u_bounds']);
+            ['u_matrix', 'u_value', 'u_value2', 'u_ramp', 'u_mask', 'u_useMask', 'u_blend', 'u_gridSize', 'u_opacity', 'u_bounds']);
         this.rampTexture = createTexture(gl, 256, 1, null, { filter: gl.LINEAR });
         this.valueTexture = createTexture(gl, 1, 1, new Uint8Array([0, 0, 0, 0]), { filter: gl.LINEAR });
+        this.valueTexture2 = createTexture(gl, 1, 1, new Uint8Array([0, 0, 0, 0]), { filter: gl.LINEAR });
         this.maskTexture = createTexture(gl, 1, 1, new Uint8Array([255, 255, 255, 255]), { filter: gl.LINEAR });
 
         // رباعي عالمي (مقصوص لحدّ مركاتور عند القطبين)
@@ -135,11 +157,18 @@ export class RasterHeatmapGLLayer implements CustomLayerInterface {
 
         this.loadImageInto(gl, this.maskTexture, `${import.meta.env.BASE_URL}landmask.png`, () => { this.maskReady = true; });
         this.loadValue(gl);
+        if (this.url2) this.loadValue2(gl);
     }
 
     private loadValue(gl: GLContext) {
         if (!this.valueTexture) return;
         this.loadImageInto(gl, this.valueTexture, this.url, (w, h) => { this.valueReady = true; this.valueSize = [w, h]; });
+    }
+
+    private loadValue2(gl: GLContext) {
+        if (!this.valueTexture2 || !this.url2) return;
+        this.valueReady2 = false;
+        this.loadImageInto(gl, this.valueTexture2, this.url2, () => { this.valueReady2 = true; });
     }
 
     private loadImageInto(gl: GLContext, tex: WebGLTexture, src: string, onReady: (w: number, h: number) => void) {
@@ -168,9 +197,10 @@ export class RasterHeatmapGLLayer implements CustomLayerInterface {
         if (this.program) gl.deleteProgram(this.program);
         if (this.quadBuffer) gl.deleteBuffer(this.quadBuffer);
         if (this.valueTexture) gl.deleteTexture(this.valueTexture);
+        if (this.valueTexture2) gl.deleteTexture(this.valueTexture2);
         if (this.rampTexture) gl.deleteTexture(this.rampTexture);
         if (this.maskTexture) gl.deleteTexture(this.maskTexture);
-        this.program = this.quadBuffer = this.valueTexture = this.rampTexture = this.maskTexture = null;
+        this.program = this.quadBuffer = this.valueTexture = this.valueTexture2 = this.rampTexture = this.maskTexture = null;
         this.map = this.glRef = null;
     }
 
@@ -193,10 +223,14 @@ export class RasterHeatmapGLLayer implements CustomLayerInterface {
             || this.layerType === 'wet-bulb'
             || this.layerType === 'dewpoint' || this.layerType === 'humidity';
         gl.uniform1f(this.loc.uniforms.u_useMask, this.maskReady && coastal ? 1 : 0);
+        // نمزج مع الإطار التالي فقط حين يكون جاهزاً ونسبة المزج > 0 (وإلا الإطار الحالي وحده).
+        const blend = (this.valueReady2 && this.blend > 0.001) ? this.blend : 0;
+        gl.uniform1f(this.loc.uniforms.u_blend, blend);
 
         bindTexture(gl, this.valueTexture!, 0); gl.uniform1i(this.loc.uniforms.u_value, 0);
         bindTexture(gl, this.rampTexture, 1); gl.uniform1i(this.loc.uniforms.u_ramp, 1);
         bindTexture(gl, this.maskTexture!, 2); gl.uniform1i(this.loc.uniforms.u_mask, 2);
+        bindTexture(gl, this.valueTexture2!, 3); gl.uniform1i(this.loc.uniforms.u_value2, 3);
 
         gl.bindBuffer(gl.ARRAY_BUFFER, this.quadBuffer);
         gl.enableVertexAttribArray(this.loc.attributes.a_pos);

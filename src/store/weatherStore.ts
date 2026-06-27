@@ -91,6 +91,8 @@ export const useWeatherStore = create<WeatherState>((set) => ({
 
     currentTimeIndex: 0,
     setCurrentTimeIndex: (index) => set({ currentTimeIndex: index }),
+    frameFraction: 0,
+    setFrameFraction: (frac) => set({ frameFraction: frac }),
     isPlaying: false,
     setIsPlaying: (playing) => set({ isPlaying: playing }),
     playbackSpeed: 1,

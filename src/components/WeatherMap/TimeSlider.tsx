@@ -38,28 +38,37 @@ export function TimeSlider({ times, currentTimeIndex, isPlaying }: TimeSliderPro
     const {
         setCurrentTimeIndex,
         setIsPlaying,
+        frameFraction,
+        setFrameFraction,
     } = useWeatherStore();
     const sliderRef = useRef<HTMLDivElement>(null);
 
+    // الموضع المستمرّ = الإطار + كسره. السحب يثبّت على خطوات 10 دقائق (1/6 ساعة) مثل Zoom Earth.
     const handleSliderClick = (event: React.MouseEvent<HTMLDivElement>) => {
         if (!sliderRef.current || times.length <= 1) {
             return;
         }
-
         const rect = sliderRef.current.getBoundingClientRect();
         const position = clamp((event.clientX - rect.left) / rect.width, 0, 1);
-        setCurrentTimeIndex(Math.round(position * (times.length - 1)));
+        const exact = position * (times.length - 1);
+        const snapped = Math.round(exact * 6) / 6;          // خطوة 10 دقائق
+        const idx = clamp(Math.floor(snapped), 0, times.length - 1);
+        setCurrentTimeIndex(idx);
+        setFrameFraction(idx >= times.length - 1 ? 0 : snapped - idx);
     };
 
     const jumpBy = (delta: number) => {
         setCurrentTimeIndex(clamp(currentTimeIndex + delta, 0, Math.max(0, times.length - 1)));
+        setFrameFraction(0);
     };
 
     const jumpByDays = (days: number) => {
         jumpBy(days * 24);
     };
 
-    const currentTime = times[currentTimeIndex] ? new Date(Number(times[currentTimeIndex]) * 1000) : new Date();
+    // الزمن المعروض = زمن الإطار + كسر الساعة (فيظهر :10، :20… مثل Zoom Earth).
+    const baseEpoch = times[currentTimeIndex] ? Number(times[currentTimeIndex]) : Date.now() / 1000;
+    const currentTime = new Date((baseEpoch + frameFraction * 3600) * 1000);
     const now = new Date();
     const hoursDiff = Math.round((currentTime.getTime() - now.getTime()) / (1000 * 60 * 60));
 
@@ -74,7 +83,7 @@ export function TimeSlider({ times, currentTimeIndex, isPlaying }: TimeSliderPro
 
     const dateLabel = `${currentTime.getDate()} ${arabicMonths[currentTime.getMonth()]}`;
     const hourLabel = `${String(currentTime.getHours()).padStart(2, '0')} : ${String(currentTime.getMinutes()).padStart(2, '0')}`;
-    const progressPercentage = (currentTimeIndex / Math.max(1, times.length - 1)) * 100;
+    const progressPercentage = ((currentTimeIndex + frameFraction) / Math.max(1, times.length - 1)) * 100;
 
     return (
         <div className="time-slider-container">

@@ -24,34 +24,36 @@ export function useAutoplay({ isPlaying, playbackSpeed, frameCount, canAdvance, 
     useEffect(() => {
         if (!isPlaying || frameCount < 2) return;
         const length = frameCount;
-        // نتحقّق على فترات قصيرة (نبضات) فنتقدّم فور جهوزية الإطار، لا على إيقاع ثابت أعمى.
-        const frameMs = 800 / playbackSpeed;
-        const tickMs  = Math.max(80, Math.min(frameMs, 200));
-        let elapsed = 0;   // الزمن منذ آخر تقدّم
-        let waited  = 0;   // كم انتظرنا جهوزية الإطار الحالي
+        // زمن عبور ساعة كاملة (نمزج الإطارين خلالها بنعومة بدل قفزة) — استيفاء زمني مثل Zoom Earth.
+        const frameMs = 1600 / playbackSpeed;
+        const tickMs  = 60;                 // ~16 تحديثاً/ثانية → حركة ناعمة
+        let waited = 0;                     // انتظار جهوزية الإطار التالي
 
         const interval = setInterval(() => {
-            elapsed += tickMs;
-            if (elapsed < frameMs) return;           // لم يحن وقت الإطار التالي بعد
             const store = useWeatherStore.getState();
-            const next  = store.currentTimeIndex + 1;
+            const idx = store.currentTimeIndex;
+            const frac = store.frameFraction + tickMs / frameMs;
 
-            if (next >= length) {
+            if (frac < 1) { store.setFrameFraction(frac); return; }   // ما زلنا داخل الساعة → مزج
+
+            const next = idx + 1;
+            if (next >= length) {                 // النهاية → عُد إلى "الآن" وتوقّف
                 store.setIsPlaying(false);
                 store.setCurrentTimeIndex(Math.max(0, Math.min(length - 1, homeIndex)));
-                elapsed = 0; return;
+                store.setFrameFraction(0);
+                return;
             }
-
-            // ننتظر جهوزية الإطار التالي (مع حدّ أقصى ~2 ثانية ثم نتقدّم رغم ذلك تفادياً للتجمّد)
+            // ننتظر جهوزية الإطار التالي (حدّ ~2ث) عند الحافّة كي لا يقفز فوق إطار غير محمّل.
             if (canAdvance && !canAdvance(next) && waited < 2000) {
                 waited += tickMs;
+                store.setFrameFraction(0.999);
                 return;
             }
             store.setCurrentTimeIndex(next);
-            elapsed = 0;
-            waited  = 0;
+            store.setFrameFraction(0);
+            waited = 0;
         }, tickMs);
 
         return () => clearInterval(interval);
-    }, [isPlaying, playbackSpeed, frameCount, canAdvance]);
+    }, [isPlaying, playbackSpeed, frameCount, canAdvance, homeIndex]);
 }

@@ -93,6 +93,10 @@ export interface WeatherState {
 
     currentTimeIndex: number;
     setCurrentTimeIndex: (index: number) => void;
+    // كسر الإطار (0..1) للاستيفاء الزمني بين الساعة والتالية — حركة ناعمة بخطوات 10 دقائق
+    // مثل Zoom Earth، بلا بيانات جديدة. مستهلكو البيانات الصحيحة يبقون على currentTimeIndex.
+    frameFraction: number;
+    setFrameFraction: (frac: number) => void;
     isPlaying: boolean;
     setIsPlaying: (playing: boolean) => void;
     playbackSpeed: number;

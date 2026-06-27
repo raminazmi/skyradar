@@ -41,7 +41,7 @@ import { layerBaseIsDark }     from './webgl/layerOrder';
 import { useAutoplay }        from './hooks/useAutoplay';
 import { useMapStyling }      from './hooks/useMapStyling';
 import { useTiledHeatmap }    from './hooks/useTiledHeatmap';
-import { useWindRaster }      from './hooks/useWindRaster';
+import { useWindRaster, lerpWindGrid } from './hooks/useWindRaster';
 import { FORECAST_LAYER_IDS, type ForecastGridType } from '../../config/weatherLayers';
 import { FiMapPin }           from 'react-icons/fi';
 
@@ -63,11 +63,11 @@ const RASTER_TYPES = new Set<string>([
 export function NewWeatherMap() {
     const {
         currentLocation, selectedModel, visibleLayers, darkMode,
-        weatherData, currentTimeIndex, isPlaying, playbackSpeed,
+        weatherData, currentTimeIndex, frameFraction, isPlaying, playbackSpeed,
         settingsOpen, setSettingsOpen, searchOpen, isobarsEnabled,
         infoPanelOpen, layerControlsOpen, sidebarOpen,
         mapBounds, zoomLevel,
-        setCurrentLocation, setInfoPanelOpen, setCurrentTimeIndex,
+        setCurrentLocation, setInfoPanelOpen, setCurrentTimeIndex, setFrameFraction,
         setMapBounds, setZoomLevel,
         initializeModels,
         layerAnimationSettings,
@@ -99,7 +99,14 @@ export function NewWeatherMap() {
 
     // حقل الرياح من النسيج المحلّي (R=سرعة، G/B=U/V) — يغذّي الجسيمات وطبقة لون الرياح
     // وتلميح الرياح بلا Open-Meteo، ويتبع مجلّد النموذج المختار.
-    const windGrid = useWindRaster(currentTimeIndex, rasterDir);
+    const windGridCur = useWindRaster(currentTimeIndex, rasterDir);
+    const windGridNext = useWindRaster(currentTimeIndex + 1, rasterDir);
+    // مزج حقل الرياح بخطوات ~10 دقائق (CPU خفيف، 6 مرّات/ساعة) — استيفاء زمني ناعم للرياح والجسيمات.
+    const windBucket = Math.round(frameFraction * 6) / 6;
+    const windGrid = useMemo(
+        () => lerpWindGrid(windGridCur, windGridNext, windBucket),
+        [windGridCur, windGridNext, windBucket],
+    );
 
     // بلاطات الطبقة العددية الفعّالة (لغير طبقات النسيج) — تُجلب وتُعرض مربّعاً مربّعاً.
     const scalarTiles = useTiledHeatmap({
@@ -157,7 +164,8 @@ export function NewWeatherMap() {
     // nowFrameIndex = 0 = الآن، فلا يبقى المؤشّر على إزاحة النموذج السابق (مثل +7 ساعات).
     useEffect(() => {
         setCurrentTimeIndex(nowFrameIndex);
-    }, [rasterDir, rasterMeta, nowFrameIndex, setCurrentTimeIndex]);
+        setFrameFraction(0);
+    }, [rasterDir, rasterMeta, nowFrameIndex, setCurrentTimeIndex, setFrameFraction]);
 
     useAutoplay({ isPlaying, playbackSpeed, frameCount: forecastTimes.length, canAdvance: playbackCanAdvance, homeIndex: nowFrameIndex });
 
@@ -261,6 +269,8 @@ export function NewWeatherMap() {
                             <RasterHeatmapWebGLLayer
                                 id="weather-heatmap-scalar"
                                 url={`${import.meta.env.BASE_URL}${rasterDir}${activeHeatmapType}_${String(currentTimeIndex).padStart(3, '0')}.png`}
+                                urlNext={`${import.meta.env.BASE_URL}${rasterDir}${activeHeatmapType}_${String(Math.min(currentTimeIndex + 1, frameHours - 1)).padStart(3, '0')}.png`}
+                                blend={frameFraction}
                                 type={activeHeatmapType}
                                 opacity={activeHeatmapType === 'clouds' ? 0.6 : activeHeatmapType === 'precipitation' ? 0.85 : 0.98}
                             />

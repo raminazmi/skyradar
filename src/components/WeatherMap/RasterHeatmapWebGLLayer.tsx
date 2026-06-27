@@ -12,11 +12,13 @@ import type { ForecastGridType } from '../../config/weatherLayers';
 interface Props {
     id: string;
     url: string;
+    urlNext?: string;   // الإطار التالي للاستيفاء الزمني
+    blend?: number;     // نسبة المزج 0..1 (كسر الإطار)
     type: ForecastGridType;
     opacity?: number;
 }
 
-export function RasterHeatmapWebGLLayer({ id, url, type, opacity = 0.9 }: Props) {
+export function RasterHeatmapWebGLLayer({ id, url, urlNext = '', blend = 0, type, opacity = 0.9 }: Props) {
     const mapRef = useMapRef();
     const layerRef = useRef<RasterHeatmapGLLayer | null>(null);
 
@@ -49,6 +51,8 @@ export function RasterHeatmapWebGLLayer({ id, url, type, opacity = 0.9 }: Props)
 
     useEffect(() => { layerRef.current?.setType(type); }, [type]);
     useEffect(() => { layerRef.current?.setUrl(url); }, [url]);
+    useEffect(() => { layerRef.current?.setNextUrl(urlNext); }, [urlNext]);
+    useEffect(() => { layerRef.current?.setBlend(blend); }, [blend]);
     useEffect(() => { layerRef.current?.setOpacity(opacity); }, [opacity]);
     return null;
 }

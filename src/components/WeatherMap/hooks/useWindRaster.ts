@@ -58,3 +58,22 @@ export function useWindRaster(timeIndex: number, dir = 'rasters/'): WeatherGrid 
 
     return grid;
 }
+
+/**
+ * يمزج شبكتي رياح (الحالية والتالية) بنسبة t (0..1) — استيفاء زمني ناعم لحقل الرياح.
+ * يمزج u/v ثم يشتقّ السرعة والاتجاه (لا يمزج الاتجاه مباشرةً تفادياً لالتفاف 360°).
+ * يُستدعى بخطوات ~10 دقائق فقط (لا لكل إطار) فيبقى خفيفاً.
+ */
+export function lerpWindGrid(a: WeatherGrid | null, b: WeatherGrid | null, t: number): WeatherGrid | null {
+    if (!a) return b;
+    if (!b || t <= 0.0001 || a.rows !== b.rows || a.cols !== b.cols) return a;
+    const points: GridPoint[][] = a.points.map((row, r) => row.map((pa, c) => {
+        const pb = b.points[r][c];
+        const u = pa.u! + (pb.u! - pa.u!) * t;
+        const v = pa.v! + (pb.v! - pa.v!) * t;
+        const speed = Math.sqrt(u * u + v * v);
+        return { lat: pa.lat, lon: pa.lon, u, v, speed, value: speed,
+            direction: (270 - Math.atan2(v, u) * 180 / Math.PI + 360) % 360 };
+    }));
+    return { ...a, points };
+}
