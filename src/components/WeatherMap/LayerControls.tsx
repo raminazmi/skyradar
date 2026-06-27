@@ -1,7 +1,11 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { FiChevronDown, FiChevronUp, FiLayers, FiX } from 'react-icons/fi';
-import { WEATHER_LAYER_CONFIGS } from '../../config/weatherLayers';
+import { WEATHER_LAYER_CONFIGS, FORECAST_LAYER_IDS, type ForecastGridType } from '../../config/weatherLayers';
 import { LayerKey, useWeatherStore } from '../../store/weatherStore';
+import { useModelLayers } from './hooks/useModelLayers';
+
+const isForecastLayer = (id: LayerKey): id is ForecastGridType =>
+    (FORECAST_LAYER_IDS as string[]).includes(id);
 
 /**
  * بنية قائمة الطبقات بترتيب Zoom Earth نفسه، مع متغيّرات فرعية لكل طبقة رئيسية
@@ -36,10 +40,30 @@ const EXTRA_LAYER_IDS: LayerKey[] = ['clouds', 'hurricanes', 'wildfires'];
 
 export function LayerControls() {
     const {
-        visibleLayers, setActiveLayer,
+        visibleLayers, setActiveLayer, closeAllLayers,
         infoPanelOpen, layerControlsOpen, setLayerControlsOpen,
+        selectedModel,
     } = useWeatherStore();
     const [collapsed, setCollapsed] = useState(false);
+
+    // الطبقات العاملة للنموذج المختار (من meta.json). نُخفي غير المتاحة من القائمة.
+    const { status: modelStatus, layers: availableLayers } = useModelLayers(selectedModel);
+    const layerAvailable = (id: LayerKey): boolean =>
+        !isForecastLayer(id) || availableLayers.has(id);   // البلاطات/المتابعة دائماً متاحة
+
+    // عند تبديل النموذج: إن كانت طبقة التوقّع المعروضة غير متاحة في النموذج الجديد، ننتقل
+    // لأوّل طبقة متاحة (منطق متّسق، بلا طبقة فارغة معطوبة). إن لم تتوفّر أيّ طبقة توقّع
+    // (النموذج قيد التحضير) نُغلق طبقات التوقّع المعروضة فقط.
+    useEffect(() => {
+        if (modelStatus === 'loading') return;
+        const shownForecast = FORECAST_LAYER_IDS.filter((id) => visibleLayers[id]);
+        const brokenShown = shownForecast.filter((id) => !availableLayers.has(id));
+        if (brokenShown.length === 0) return;
+        const firstAvailable = FORECAST_LAYER_IDS.find((id) => availableLayers.has(id));
+        if (firstAvailable) setActiveLayer(firstAvailable);
+        else closeAllLayers();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [modelStatus, selectedModel]);
 
     const groupActive = (g: GroupDef): boolean =>
         g.variants ? g.variants.some((v) => visibleLayers[v.id]) : !!visibleLayers[g.parentId];
@@ -61,6 +85,13 @@ export function LayerControls() {
     }
 
     const renderGroup = (g: GroupDef) => {
+        // أخفِ مجموعات التوقّع (ومتغيّراتها) غير المتاحة للنموذج؛ البلاطات (قمر/رادار) تبقى.
+        const variants = g.variants?.filter((v) => layerAvailable(v.id));
+        if (g.variants) {
+            if (!variants || variants.length === 0) return null;
+        } else if (!layerAvailable(g.parentId)) {
+            return null;
+        }
         const cfg = WEATHER_LAYER_CONFIGS[g.parentId];
         const Icon = cfg.icon;
         const active = groupActive(g);
@@ -82,9 +113,9 @@ export function LayerControls() {
                 </button>
 
                 {/* المتغيّرات الفرعية تظهر عند تفعيل المجموعة (كـ Zoom Earth) */}
-                {active && g.variants && (
+                {active && variants && (
                     <div className="layer-variants">
-                        {g.variants.map((v) => {
+                        {variants.map((v) => {
                             const on = visibleLayers[v.id];
                             return (
                                 <button
@@ -104,6 +135,7 @@ export function LayerControls() {
     };
 
     const renderExtra = (id: LayerKey) => {
+        if (!layerAvailable(id)) return null;   // مثل الغيوم: تُخفى إن لم يولّدها النموذج
         const cfg = WEATHER_LAYER_CONFIGS[id];
         const Icon = cfg.icon;
         const active = !!visibleLayers[id];
@@ -137,6 +169,11 @@ export function LayerControls() {
 
             {!collapsed && (
                 <div className="layer-controls-list">
+                    {modelStatus === 'missing' && (
+                        <div className="layer-model-notice">
+                            طبقات هذا النموذج قيد التحضير على الخادم — اختر نموذجاً آخر مؤقّتاً.
+                        </div>
+                    )}
                     {LAYER_GROUPS.map(renderGroup)}
                     <div className="layer-controls-divider" />
                     {EXTRA_LAYER_IDS.map(renderExtra)}

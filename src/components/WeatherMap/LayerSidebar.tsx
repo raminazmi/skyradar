@@ -1,6 +1,7 @@
 import { FiMoon, FiPause, FiPlay, FiSun, FiX } from 'react-icons/fi';
 import { FORECAST_LAYER_IDS, TILE_OVERLAY_LAYER_IDS, WEATHER_LAYER_CONFIGS } from '../../config/weatherLayers';
 import { LayerKey, useWeatherStore } from '../../store/weatherStore';
+import { useModelLayers } from './hooks/useModelLayers';
 
 const TRACKING_LAYER_IDS: LayerKey[] = ['hurricanes', 'wildfires'];
 
@@ -19,9 +20,14 @@ export function LayerSidebar() {
         availableModels,
     } = useWeatherStore();
 
+    const { status: modelStatus, layers: availableLayers } = useModelLayers(selectedModel);
+
     if (!sidebarOpen) return null;
 
-    const forecastLayers = FORECAST_LAYER_IDS.map((id) => WEATHER_LAYER_CONFIGS[id]);
+    // طبقات التوقّع: فقط ما ولّده النموذج المختار (من meta.json). البلاطات والمتابعة مستقلّة.
+    const forecastLayers = FORECAST_LAYER_IDS
+        .filter((id) => availableLayers.has(id))
+        .map((id) => WEATHER_LAYER_CONFIGS[id]);
     const tileOverlays = TILE_OVERLAY_LAYER_IDS.map((id) => WEATHER_LAYER_CONFIGS[id]);
     const trackers = TRACKING_LAYER_IDS.map((id) => WEATHER_LAYER_CONFIGS[id]);
 
@@ -50,6 +56,11 @@ export function LayerSidebar() {
                 </div>
 
                 <div className="sidebar-layers">
+                    {modelStatus === 'missing' && (
+                        <div className="layer-model-notice">
+                            طبقات هذا النموذج قيد التحضير على الخادم — اختر نموذجاً آخر مؤقّتاً.
+                        </div>
+                    )}
                     <LayerGroup title="طبقات التوقعات" layers={forecastLayers} visibleLayers={visibleLayers} onSelect={setActiveLayer} />
                     <div className="sidebar-section-divider" />
                     <LayerGroup title="الرادار والقمر الصناعي" layers={tileOverlays} visibleLayers={visibleLayers} onSelect={setActiveLayer} />

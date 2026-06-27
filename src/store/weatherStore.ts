@@ -25,7 +25,7 @@ export const useWeatherStore = create<WeatherState>((set) => ({
     availableModels: [
         { id: 'GFS', name: 'GFS', resolution: '22 كم' },
         { id: 'ECMWF', name: 'ECMWF', resolution: '9 كم' },
-        // { id: 'ICON', name: 'ICON', resolution: '13 كم' },
+        { id: 'ICON', name: 'ICON', resolution: '13 كم' },
     ],
     selectedModel: 'GFS',
     setSelectedModel: (model) => set({ selectedModel: model }),
