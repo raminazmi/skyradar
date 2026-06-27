@@ -52,7 +52,10 @@ def refresh(vars_list, hours, outdir):
 def write_meta(outdir, hours, run_epoch):
     """يكتب meta.json بزمن الدورة المثبّتة نفسها التي وُلِّدت منها كل الإطارات — فتتطابق
     محاذاة "الآن" في الواجهة تماماً مع بيانات الإطارات (لا انزياح ولا قفزات)."""
-    meta = {'run_epoch': run_epoch, 'hours': max(hours) + 1, 'generated_epoch': int(time.time()),
+    # hours من مسح القرص (كل الإطارات الموجودة) لا من الدفعة الحالية — كي لا يتقلّص الشريط
+    # عند التشغيل المقسّم. fallback لمدى الدفعة إن لم يُكتب أي إطار بعد.
+    hours_total = g.frame_count(outdir) or (max(hours) + 1)
+    meta = {'run_epoch': run_epoch, 'hours': hours_total, 'generated_epoch': int(time.time()),
             'layers': g.list_available_layers(outdir)}
     with open(os.path.join(outdir, 'meta.json'), 'w') as f:
         json.dump(meta, f)

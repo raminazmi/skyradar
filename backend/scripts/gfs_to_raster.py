@@ -10,7 +10,7 @@ gfs_to_raster.py
 الاستخدام:
   python gfs_to_raster.py --var temperature --hour 0 --out ../public/rasters/temperature_000.png
 """
-import os, sys, struct, zlib, argparse, datetime, tempfile, urllib.request
+import os, sys, struct, zlib, argparse, datetime, tempfile, urllib.request, glob
 
 # ── جسر تحميل مكتبة eccodes المضمّنة في ecmwflibs ─────────────────────────────────
 # على ويندوز نحتاج add_dll_directory + توجيه findlibs إلى eccodes.dll.
@@ -236,6 +236,19 @@ FORECAST_LAYER_IDS = [
     'wind', 'wind-gusts', 'precipitation', 'temperature', 'feels-like',
     'wet-bulb', 'pressure', 'humidity', 'dewpoint', 'clouds',
 ]
+
+
+def frame_count(outdir):
+    """أعلى رقم إطار (NNN) موجود فعلاً على القرص + 1 — عبر كل أنواع الطبقات. يُستخدم لكتابة
+    meta.hours بحيث يعكس *كل* الإطارات المولّدة (مهما كانت الدفعة الأخيرة صغيرة)، فلا يتقلّص
+    الشريط الزمني في الواجهة عند التشغيل المقسّم. يرجع 0 إن لم يوجد أي إطار."""
+    mx = -1
+    for t in FORECAST_LAYER_IDS:
+        for p in glob.glob(os.path.join(outdir, f"{t}_*.png")):
+            stem = os.path.basename(p)[len(t) + 1:-4]
+            if stem.isdigit():
+                mx = max(mx, int(stem))
+    return mx + 1
 
 
 def list_available_layers(outdir):
