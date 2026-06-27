@@ -25,7 +25,10 @@ export const useWeatherStore = create<WeatherState>((set) => ({
     availableModels: [
         { id: 'GFS', name: 'GFS', resolution: '22 كم' },
         { id: 'ECMWF', name: 'ECMWF', resolution: '9 كم' },
-        { id: 'ICON', name: 'ICON', resolution: '13 كم' },
+        // ICON معطّل على الاستضافة المشتركة (cPanel): ملفاته العالمية icosahedral بلا إحداثيات
+        // مضمّنة، وإعادة تشبيكها تتطلّب ملف شبكة DWD ~1.6GB أو أداة cdo غير المتاحة هنا. الكود
+        // والسكربتات (icon_to_raster.py، فرع rasters/icon/) تبقى جاهزة لإعادة التفعيل على VPS.
+        // { id: 'ICON', name: 'ICON', resolution: '13 كم' },
     ],
     selectedModel: 'GFS',
     setSelectedModel: (model) => set({ selectedModel: model }),

@@ -13,16 +13,21 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 PY="${PYTHON:-python3}"
 OUTDIR="${OUTDIR:-$ROOT/backend/public/rasters}"
 HOURS="${HOURS:-0-120}"   # 5 أيام: لوحة النقطة (rasters-only) تعرض حتى 120 ساعة
-ECMWF="${ECMWF:-1}"        # 1 = ولّد ECMWF أيضاً (يتطلّب حزمة ecmwf-opendata)
-ICON="${ICON:-1}"          # 1 = ولّد ICON أيضاً (DWD opendata + scipy لإعادة التشبيك)
+GFS="${GFS:-1}"           # 1 = ولّد GFS. اجعله 0 لتشغيل ECMWF وحده (دفعات أصغر/أخفّ).
+ECMWF="${ECMWF:-1}"       # 1 = ولّد ECMWF أيضاً (يتطلّب حزمة ecmwf-opendata)
+ICON="${ICON:-1}"         # 1 = ولّد ICON أيضاً (DWD opendata + scipy لإعادة التشبيك)
 LOG="${LOG:-$ROOT/backend/storage/logs/rasters.log}"
 
 mkdir -p "$OUTDIR" "$(dirname "$LOG")"
 
 # GFS: نُسج + meta + مكعّبات النقطة (refresh_all يبني المكعّبات تلقائياً في النهاية).
-echo "[$(date -u +%FT%TZ)] GFS refresh start (hours=$HOURS)" >> "$LOG"
-"$PY" "$ROOT/backend/scripts/refresh_all.py" --hours "$HOURS" --outdir "$OUTDIR" >> "$LOG" 2>&1
-echo "[$(date -u +%FT%TZ)] GFS refresh done (exit $?)" >> "$LOG"
+# يُفصَل عن ECMWF بمفتاح GFS كي تبقى كل عملية cron قصيرة (تجنّب قتل حدّ الزمن/المعالج
+# على الاستضافة المشتركة): شغّل GFS و ECMWF في مهامّ منفصلة بمدى ساعات صغير لكلٍّ.
+if [ "$GFS" = "1" ]; then
+  echo "[$(date -u +%FT%TZ)] GFS refresh start (hours=$HOURS)" >> "$LOG"
+  "$PY" "$ROOT/backend/scripts/refresh_all.py" --hours "$HOURS" --outdir "$OUTDIR" >> "$LOG" 2>&1
+  echo "[$(date -u +%FT%TZ)] GFS refresh done (exit $?)" >> "$LOG"
+fi
 
 # ECMWF: مجلّد منفصل rasters/ecmwf + مكعّباته (open data كل 3 ساعات).
 if [ "$ECMWF" = "1" ]; then
