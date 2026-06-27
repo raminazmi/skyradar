@@ -19,12 +19,15 @@ mkdir -p "$(dirname "$STATE")" "$(dirname "$LOG")"
 
 # مدى كل دفعة 12 ساعة (الحدّ الآمن المؤكَّد ~5د؛ 24س تُقتل). عدّل RANGES لتغيير المدى/التغطية.
 RANGES=(0-12 13-24 25-36 37-48 49-60 61-72 73-84 85-96 97-108 109-120)
+# 1 = أدرج ICON في الدورة (يحتاج فهرس icon_nn_index_*.npy مرفوعاً في rasters/icon/). 0 = تعطيله.
+INCLUDE_ICON="${INCLUDE_ICON:-1}"
 
-# قائمة المهام: لكل مدى، GFS ثم ECMWF (نموذج واحد لكل تشغيل = عملية قصيرة).
+# قائمة المهام: لكل مدى، نموذج واحد لكل تشغيل = عملية قصيرة (لا تداخل بفضل الفاصل الزمني).
 JOBS=()
 for r in "${RANGES[@]}"; do
   JOBS+=("GFS:$r")
   JOBS+=("ECMWF:$r")
+  [ "$INCLUDE_ICON" = "1" ] && JOBS+=("ICON:$r")
 done
 N=${#JOBS[@]}
 
@@ -35,13 +38,17 @@ case "$idx" in (''|*[!0-9]*) idx=0 ;; esac
 
 job="${JOBS[$idx]}"
 model="${job%%:*}"; hours="${job##*:}"
-if [ "$model" = "GFS" ]; then GFLAG=1; EFLAG=0; else GFLAG=0; EFLAG=1; fi
+case "$model" in
+  GFS)   GFLAG=1; EFLAG=0; IFLAG=0 ;;
+  ECMWF) GFLAG=0; EFLAG=1; IFLAG=0 ;;
+  ICON)  GFLAG=0; EFLAG=0; IFLAG=1 ;;
+esac
 
 echo "[$(date -u +%FT%TZ)] chunk dispatcher: idx=$idx/$N model=$model hours=$hours" >> "$LOG"
 
 # نُقدّم الفهرس *قبل* التشغيل، فحتى لو قُتلت هذه الدفعة لا نعلق عليها — تُعاد لاحقاً في الدورة.
 echo $(( (idx + 1) % N )) > "$STATE"
 
-PYTHON="$PY" HOURS="$hours" GFS="$GFLAG" ECMWF="$EFLAG" ICON=0 \
+PYTHON="$PY" HOURS="$hours" GFS="$GFLAG" ECMWF="$EFLAG" ICON="$IFLAG" \
   /bin/bash "$ROOT/scripts/refresh-rasters-cron.sh" || \
   echo "[$(date -u +%FT%TZ)] chunk idx=$idx ($model $hours) فشل/قُتل — يُعاد في الدورة" >> "$LOG"

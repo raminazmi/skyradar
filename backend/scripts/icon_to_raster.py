@@ -134,7 +134,10 @@ def _write_scalar(arr, vmin, vmax, out_path, label):
 
 def gen_scalar(var, hour, out_path):
     cfg = SCALAR[var]
-    grib = _download_grib(cfg['dwd'], cfg['file'], hour, var)
+    # ICON لا ينشر VMAX_10M (الهبّات) عند f000 (قيمة قصوى عن الفترة السابقة، غير موجودة).
+    # نستخدم f001 لإطار الهبّات صفر كي لا تغيب الطبقة كلياً ولا يظهر إطار "الآن" فارغاً.
+    src_hour = 1 if (var == 'wind-gusts' and hour == 0) else hour
+    grib = _download_grib(cfg['dwd'], cfg['file'], src_hour, var)
     arr = _regrid(grib) * cfg['scale'] + cfg['offset']
     _write_scalar(arr, cfg['vmin'], cfg['vmax'], out_path, f"ICON f{hour:03d}")
 
