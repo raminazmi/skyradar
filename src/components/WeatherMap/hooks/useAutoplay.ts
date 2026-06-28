@@ -24,33 +24,41 @@ export function useAutoplay({ isPlaying, playbackSpeed, frameCount, canAdvance, 
     useEffect(() => {
         if (!isPlaying || frameCount < 2) return;
         const length = frameCount;
-        // زمن عبور ساعة كاملة (نمزج الإطارين خلالها بنعومة بدل قفزة) — استيفاء زمني مثل Zoom Earth.
-        const frameMs = 1600 / playbackSpeed;
-        const tickMs  = 60;                 // ~16 تحديثاً/ثانية → حركة ناعمة
-        let waited = 0;                     // انتظار جهوزية الإطار التالي
+        // خطوات 10 دقائق منفصلة مثل Zoom Earth: 6 خطوات فرعية لكل ساعة (الكسر = sub/6).
+        // المزج البصري يعطي تدرّجاً بين الخطوات بلا بيانات جديدة، والساعة تتقدّم 00→10→20…
+        const SUB = 6;
+        const stepMs = Math.max(150, (1000 / playbackSpeed));   // زمن لبث كل خطوة 10 دقائق
+        const tickMs = Math.min(stepMs, 120);
+        let elapsed = 0;
+        let waited = 0;
 
         const interval = setInterval(() => {
+            elapsed += tickMs;
+            if (elapsed < stepMs) return;                       // لم يحن وقت الخطوة التالية
             const store = useWeatherStore.getState();
             const idx = store.currentTimeIndex;
-            const frac = store.frameFraction + tickMs / frameMs;
+            const sub = Math.round(store.frameFraction * SUB);  // الخطوة الفرعية الحالية 0..5
 
-            if (frac < 1) { store.setFrameFraction(frac); return; }   // ما زلنا داخل الساعة → مزج
+            if (sub < SUB - 1) {                                // خطوة داخل نفس الساعة
+                store.setFrameFraction((sub + 1) / SUB);
+                elapsed = 0;
+                return;
+            }
 
-            const next = idx + 1;
-            if (next >= length) {                 // النهاية → عُد إلى "الآن" وتوقّف
+            const next = idx + 1;                              // الخطوة التالية = الساعة التالية
+            if (next >= length) {                              // النهاية → عُد إلى "الآن" وتوقّف
                 store.setIsPlaying(false);
                 store.setCurrentTimeIndex(Math.max(0, Math.min(length - 1, homeIndex)));
                 store.setFrameFraction(0);
                 return;
             }
-            // ننتظر جهوزية الإطار التالي (حدّ ~2ث) عند الحافّة كي لا يقفز فوق إطار غير محمّل.
             if (canAdvance && !canAdvance(next) && waited < 2000) {
                 waited += tickMs;
-                store.setFrameFraction(0.999);
                 return;
             }
             store.setCurrentTimeIndex(next);
             store.setFrameFraction(0);
+            elapsed = 0;
             waited = 0;
         }, tickMs);
 
