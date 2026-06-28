@@ -1,3 +1,18 @@
+# كاش متصفّح لصور النُسج (rasters): الإطارات تُعاد كثيراً (تشغيل/تبديل/عودة لنموذج).
+# 30 دقيقة توازن بين السرعة والحداثة — الدورة تتحدّث كل ساعات، و meta.json يبقى no-store
+# (تحدّده الواجهة) فيظلّ زمن الدورة دقيقاً. هذا يجعل إعادة التحميل من الكاش فورية.
+<IfModule mod_headers.c>
+    <FilesMatch "\.png$">
+        Header set Cache-Control "public, max-age=1800"
+    </FilesMatch>
+</IfModule>
+<IfModule mod_expires.c>
+    ExpiresActive On
+    <FilesMatch "\.png$">
+        ExpiresDefault "access plus 30 minutes"
+    </FilesMatch>
+</IfModule>
+
 <IfModule mod_rewrite.c>
     <IfModule mod_negotiation.c>
         Options -MultiViews -Indexes
