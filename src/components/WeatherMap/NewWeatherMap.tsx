@@ -14,6 +14,7 @@ import { LayerSidebar }     from './LayerSidebar';
 import { TimeSlider }       from './TimeSlider';
 import { WeatherInfoPanel } from './WeatherInfoPanel';
 import { ModelSwitch } from './ModelSwitch';
+import { MapLoadingToast } from './MapLoadingToast';
 import { ParticleToggle } from './ParticleToggle';
 import { IsobarToggle } from './IsobarToggle';
 import { IsobarLayer } from './IsobarLayer';
@@ -217,6 +218,14 @@ export function NewWeatherMap() {
                 dir="rtl"
             >
                 <LayerSidebar />
+
+                {/* مؤشّر تحميل علوي عند تبديل النموذج/الطبقة (أسلوب Zoom Earth) */}
+                <MapLoadingToast
+                    rasterDir={rasterDir}
+                    activeType={activeHeatmapType}
+                    windVisible={visibleLayers.wind}
+                    modelName={selectedModel}
+                />
 
                 {/* شعار عائم فوق الخريطة — يُخفى عند فتح البحث كي لا يغطّيه */}
                 {!searchOpen && (
