@@ -13,7 +13,7 @@ interface Props {
  * يظهر فقط للطبقات التي تدعم الجسيمات (الرياح + كل الطبقات العددية).
  */
 export function ParticleToggle({ activeLayerKey }: Props) {
-    const { layerAnimationSettings, setLayerParticlesEnabled } = useWeatherStore();
+    const { particlesEnabled, setParticlesEnabled } = useWeatherStore();
     if (!activeLayerKey) return null;
 
     const key = activeLayerKey as LayerKey;
@@ -21,12 +21,13 @@ export function ParticleToggle({ activeLayerKey }: Props) {
     const supportsParticles = key === 'wind' || !!cfg?.requiresWindGrid;
     if (!supportsParticles) return null;
 
-    const enabled = !!layerAnimationSettings[key]?.particlesEnabled;
+    // مفتاح عالمي: يبقى مُفعّلاً عبر كل الطبقات (لا يتوقّف عند تبديل الطبقة).
+    const enabled = particlesEnabled;
 
     return (
         <button
             className={`particle-toggle ${enabled ? 'active' : ''}`}
-            onClick={() => setLayerParticlesEnabled(key, !enabled)}
+            onClick={() => setParticlesEnabled(!enabled)}
             title={enabled ? 'إخفاء جسيمات الرياح' : 'إظهار جسيمات الرياح'}
             type="button"
         >

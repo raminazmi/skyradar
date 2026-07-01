@@ -135,6 +135,8 @@ export const useWeatherStore = create<WeatherState>((set) => ({
     setSearchOpen: (open) => set({ searchOpen: open }),
     isobarsEnabled: true,
     setIsobarsEnabled: (enabled) => set({ isobarsEnabled: enabled }),
+    particlesEnabled: true,
+    setParticlesEnabled: (enabled) => set({ particlesEnabled: enabled }),
     legendOpen: true,
     setLegendOpen: (open) => set({ legendOpen: open }),
 

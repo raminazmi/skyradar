@@ -67,7 +67,7 @@ export function NewWeatherMap() {
         weatherData, currentTimeIndex, frameFraction, isPlaying, playbackSpeed,
         settingsOpen, setSettingsOpen, searchOpen, isobarsEnabled,
         infoPanelOpen, layerControlsOpen, sidebarOpen,
-        mapBounds, zoomLevel,
+        mapBounds, zoomLevel, particlesEnabled,
         setCurrentLocation, setInfoPanelOpen, setCurrentTimeIndex, setFrameFraction,
         setMapBounds, setZoomLevel,
         initializeModels,
@@ -295,11 +295,11 @@ export function NewWeatherMap() {
                             />
                         )}
 
-                        {/* جسيمات الرياح — WebGL (GPU) فوق أي طبقة فعّالة */}
+                        {/* جسيمات الرياح — WebGL (GPU) فوق أي طبقة فعّالة. مفتاح عالمي واحد
+                            (particlesEnabled) يبقى عبر كل الطبقات؛ الإعدادات البصرية من طبقة الرياح. */}
                         {(() => {
-                            const key = visibleLayers.wind ? 'wind' : activeHeatmapType;
-                            const s = key ? layerAnimationSettings[key] : null;
-                            if (!windGrid || !s || !s.particlesEnabled || s.reduceMotion) return null;
+                            const s = layerAnimationSettings.wind;
+                            if (!windGrid || !particlesEnabled || !s || s.reduceMotion) return null;
                             return <ParticleWebGLLayer id="weather-particles" windGrid={windGrid} settings={s} darkMode={darkMode} />;
                         })()}
 

@@ -138,6 +138,9 @@ export interface WeatherState {
     setSearchOpen: (open: boolean) => void;
     isobarsEnabled: boolean;
     setIsobarsEnabled: (enabled: boolean) => void;
+    // مفتاح جسيمات الرياح العالمي (يبقى عبر كل الطبقات مثل Zoom Earth) — لا per-layer.
+    particlesEnabled: boolean;
+    setParticlesEnabled: (enabled: boolean) => void;
     legendOpen: boolean;
     setLegendOpen: (open: boolean) => void;
 
