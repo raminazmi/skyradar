@@ -96,7 +96,8 @@ def gen_wind(hour, out_path):
     R = np.clip(speed / g.WIND_SPEED_MAX, 0, 1) * 255
     G = (np.clip(u, -g.WIND_UV_MAX, g.WIND_UV_MAX) / g.WIND_UV_MAX * 0.5 + 0.5) * 255
     B = (np.clip(v, -g.WIND_UV_MAX, g.WIND_UV_MAX) / g.WIND_UV_MAX * 0.5 + 0.5) * 255
-    g.write_png_rgb(out_path, R.round(), G.round(), B.round())
+    R, G, B = g.downsample_wind(R.round(), G.round(), B.round())
+    g.write_png_rgb(out_path, R, G, B)
     print(f"تمّ: {out_path} (ECMWF f{step:03d}, speed max={float(speed.max()):.0f} km/h)", flush=True)
 
 

@@ -169,6 +169,17 @@ def write_png_rgb(path, r, g, b):
 WIND_UV_MAX = 60.0
 WIND_SPEED_MAX = 120.0  # يطابق VALUE_RANGES['wind']
 
+# دقّة إخراج الرياح: المتصفّح يصغّرها أصلاً إلى شبكة 360×181 (useWindRaster)، فلا فائدة من
+# 1440×721 (2.5MB). نُخرجها بنصف الدقّة (721×1440 → 361×720) → ~6× أخفّ بلا خسارة بصرية.
+# المحاذاة تبقى دقيقة: الصفّ المُعيَّن r ↔ خط عرض -90 + r*0.5 (يطابق فكّ الواجهة تماماً).
+WIND_STRIDE = 2
+
+
+def downsample_wind(R, G, B):
+    """تصغير قنوات الرياح بالأخذ كل WIND_STRIDE بكسل — يبقي الامتداد العالمي والصفّ 0 = الجنوب."""
+    s = WIND_STRIDE
+    return R[::s, ::s], G[::s, ::s], B[::s, ::s]
+
 
 def wind_url(hour):
     """رابط رياح GFS (U/V) من الدورة المثبّتة نفسها كي تتطابق الرياح زمنياً مع باقي الطبقات."""
@@ -205,7 +216,8 @@ def generate_wind(hour, out_path):
     R = np.clip(speed / WIND_SPEED_MAX, 0, 1) * 255
     G = (np.clip(u, -WIND_UV_MAX, WIND_UV_MAX) / WIND_UV_MAX * 0.5 + 0.5) * 255
     B = (np.clip(v, -WIND_UV_MAX, WIND_UV_MAX) / WIND_UV_MAX * 0.5 + 0.5) * 255
-    write_png_rgb(out_path, R.round(), G.round(), B.round())
+    R, G, B = downsample_wind(R.round(), G.round(), B.round())
+    write_png_rgb(out_path, R, G, B)
     print(f"تمّ: {out_path} ({label}, speed max={float(speed.max()):.0f} km/h)", flush=True)
 
 
