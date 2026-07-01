@@ -42,6 +42,7 @@ uniform sampler2D u_value;      // قيمة الشبكة المُطبّعة (R) 
 uniform sampler2D u_ramp;       // شريط الألوان 256×1 (premultiplied)
 uniform sampler2D u_mask;       // قناع يابسة/بحر بإسقاط مركاتور (R: يابسة>0.5)
 uniform float u_useMask;        // 1 = كسر الاستيفاء عند الساحل (حافة حادّة)
+uniform float u_wrapX;          // 1 = شبكة عالمية: لُفّ الطول لتظهر في كل نسخ العالم
 uniform vec2 u_gridSize;        // (cols, rows) لشبكة القيم
 uniform float u_opacity;
 uniform vec4 u_bounds;          // (west, south, east, north) بالدرجات
@@ -80,9 +81,11 @@ void main() {
     float lng = v_merc.x * 360.0 - 180.0;
     float latRad = 2.0 * atan(exp(PI * (1.0 - 2.0 * v_merc.y))) - PI * 0.5;
     float lat = degrees(latRad);
-    float u = (lng - u_bounds.x) / (u_bounds.z - u_bounds.x);
+    // شبكة عالمية: الطول ملفوف (fract) فتظهر الطبقة في كل نسخ العالم؛ وإلا حسب الحدود.
+    float u = u_wrapX > 0.5 ? fract(v_merc.x) : (lng - u_bounds.x) / (u_bounds.z - u_bounds.x);
     float v = (lat - u_bounds.y) / (u_bounds.w - u_bounds.y);
-    if (u < 0.0 || u > 1.0 || v < 0.0 || v > 1.0) discard;
+    if (v < 0.0 || v > 1.0) discard;
+    if (u_wrapX < 0.5 && (u < 0.0 || u > 1.0)) discard;
 
     // المسار البسيط: استيفاء ناعم (smoothstep) بلا قناع.
     if (u_useMask < 0.5) {
@@ -95,7 +98,7 @@ void main() {
 
     // المسار الواعي بالساحل: استيفاء ثنائي يدوي يُضعِّف العيّنات المخالفة لنوع
     // البكسل (يابسة/بحر) فينكسر الحقل اللوني عند خطّ الساحل بحافة حادّة كـ Zoom Earth.
-    float pixelLand = isLand(vec2(v_merc.x, v_merc.y));
+    float pixelLand = isLand(vec2(fract(v_merc.x), v_merc.y));
     vec2 gs = u_gridSize;
     float fx = u * gs.x - 0.5;
     float fy = v * gs.y - 0.5;
@@ -148,6 +151,7 @@ export class HeatmapGLLayer implements CustomLayerInterface {
     private opacity: number;
     private rampDirty = true;
     private gridDirty = false;
+    private wrapX = false;   // شبكة عالمية → لُفّ الطول عبر نسخ العالم
 
     constructor(id: string, layerType: ForecastGridType, opacity = 0.8) {
         this.id = id;
@@ -179,7 +183,7 @@ export class HeatmapGLLayer implements CustomLayerInterface {
         this.map = map;
         this.program = createProgram(gl, VERTEX_SRC, FRAGMENT_SRC);
         this.loc = getLocations(gl, this.program, ['a_pos'],
-            ['u_matrix', 'u_value', 'u_ramp', 'u_mask', 'u_useMask', 'u_gridSize', 'u_opacity', 'u_bounds']);
+            ['u_matrix', 'u_value', 'u_ramp', 'u_mask', 'u_useMask', 'u_wrapX', 'u_gridSize', 'u_opacity', 'u_bounds']);
         this.rampTexture = createTexture(gl, 256, 1, null, { filter: gl.LINEAR });
         this.valueTexture = createTexture(gl, 1, 1, new Uint8Array([0, 0, 0, 0]), { filter: gl.LINEAR });
         // قناع مبدئي 1×1 "يابسة" حتى يصل القناع الحقيقي (سلوك = استيفاء عادي).
@@ -249,6 +253,7 @@ export class HeatmapGLLayer implements CustomLayerInterface {
 
         const b = this.grid.bounds;
         gl.uniform4f(this.loc.uniforms.u_bounds, b.west, b.south, b.east, b.north);
+        gl.uniform1f(this.loc.uniforms.u_wrapX, this.wrapX ? 1 : 0);
         gl.uniform1f(this.loc.uniforms.u_opacity, this.opacity);
         gl.uniform2f(this.loc.uniforms.u_gridSize, this.grid.cols, this.grid.rows);
         // القناع يُفعَّل فقط للحقول السطحية المرتبطة بنوع السطح (حرارة/إحساس/ندى/رطوبة)؛
@@ -288,17 +293,27 @@ export class HeatmapGLLayer implements CustomLayerInterface {
         const b = this.grid.bounds;
         const north = Math.max(-LAT_LIMIT, Math.min(LAT_LIMIT, b.north));
         const south = Math.max(-LAT_LIMIT, Math.min(LAT_LIMIT, b.south));
-        const nw = MercatorCoordinate.fromLngLat({ lng: b.west, lat: north });
-        const ne = MercatorCoordinate.fromLngLat({ lng: b.east, lat: north });
-        const sw = MercatorCoordinate.fromLngLat({ lng: b.west, lat: south });
-        const se = MercatorCoordinate.fromLngLat({ lng: b.east, lat: south });
+        const yN = MercatorCoordinate.fromLngLat({ lng: b.west, lat: north }).y;
+        const yS = MercatorCoordinate.fromLngLat({ lng: b.west, lat: south }).y;
+
+        // شبكة عالمية (‎-180..180‎): نمدّد المستطيل ليغطّي عدّة نسخ عالم فتظهر الطبقة في كل
+        // النسخ أثناء التحريك (الطول يُلَفّ في الشيدر). غير العالمية: مستطيل الحدود فقط.
+        this.wrapX = b.west <= -179.9 && b.east >= 179.9;
+        let x0: number, x1: number;
+        if (this.wrapX) {
+            const N = 3;
+            x0 = -N; x1 = 1 + N;
+        } else {
+            x0 = MercatorCoordinate.fromLngLat({ lng: b.west, lat: north }).x;
+            x1 = MercatorCoordinate.fromLngLat({ lng: b.east, lat: north }).x;
+        }
 
         // ترتيب TRIANGLE_STRIP: NW, SW, NE, SE
         const verts = new Float32Array([
-            nw.x, nw.y,
-            sw.x, sw.y,
-            ne.x, ne.y,
-            se.x, se.y,
+            x0, yN,
+            x0, yS,
+            x1, yN,
+            x1, yS,
         ]);
         gl.bindBuffer(gl.ARRAY_BUFFER, this.quadBuffer);
         gl.bufferData(gl.ARRAY_BUFFER, verts, gl.DYNAMIC_DRAW);

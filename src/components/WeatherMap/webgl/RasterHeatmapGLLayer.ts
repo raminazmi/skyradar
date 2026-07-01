@@ -66,15 +66,15 @@ float smoothVal(sampler2D tex, vec2 uv, vec2 gs, vec2 texel, float pixelLand) {
 }
 
 void main() {
-    float lng = v_merc.x * 360.0 - 180.0;
+    // الطول يُلَفّ لنسخة العالم الواحدة (fract) فتظهر الطبقة في كل النسخ المكرّرة أثناء التحريك.
+    float u = fract(v_merc.x);
     float latRad = 2.0 * atan(exp(PI * (1.0 - 2.0 * v_merc.y))) - PI * 0.5;
     float lat = degrees(latRad);
-    float u = (lng - u_bounds.x) / (u_bounds.z - u_bounds.x);
     float v = (lat - u_bounds.y) / (u_bounds.w - u_bounds.y);
-    if (u < 0.0 || u > 1.0 || v < 0.0 || v > 1.0) discard;
+    if (v < 0.0 || v > 1.0) discard;              // خط العرض فقط (الطول ملفوف)
     vec2 gs = u_gridSize;
     vec2 texel = 1.0 / gs;
-    float pixelLand = isLand(vec2(v_merc.x, v_merc.y));
+    float pixelLand = isLand(vec2(u, v_merc.y));   // قناع البرّ ملفوف كذلك
 
     float a = smoothVal(u_value, vec2(u,v), gs, texel, pixelLand);
     if (a < 0.0) discard;
@@ -146,14 +146,16 @@ export class RasterHeatmapGLLayer implements CustomLayerInterface {
         this.valueTexture2 = createTexture(gl, 1, 1, new Uint8Array([0, 0, 0, 0]), { filter: gl.LINEAR });
         this.maskTexture = createTexture(gl, 1, 1, new Uint8Array([255, 255, 255, 255]), { filter: gl.LINEAR });
 
-        // رباعي عالمي (مقصوص لحدّ مركاتور عند القطبين)
-        const nw = MercatorCoordinate.fromLngLat({ lng: -180, lat: LAT_LIMIT });
-        const ne = MercatorCoordinate.fromLngLat({ lng: 180, lat: LAT_LIMIT });
-        const sw = MercatorCoordinate.fromLngLat({ lng: -180, lat: -LAT_LIMIT });
-        const se = MercatorCoordinate.fromLngLat({ lng: 180, lat: -LAT_LIMIT });
+        // رباعي يغطّي عدّة نسخ عالم أفقياً (مركاتور x من -N إلى 1+N) كي تظهر الطبقة في كل
+        // النسخ المكرّرة (renderWorldCopies) أثناء التحريك بلا فراغات. الطول يُلَفّ في الشيدر
+        // (fract) فتُعاد عيّنة النسيج العالمي لكل نسخة. y من نسخة واحدة (خط العرض لا يتكرّر).
+        const yN = MercatorCoordinate.fromLngLat({ lng: 0, lat: LAT_LIMIT }).y;
+        const yS = MercatorCoordinate.fromLngLat({ lng: 0, lat: -LAT_LIMIT }).y;
+        const N = 3;                       // 3 نسخ لكل جانب (7 إجمالاً) تكفي حتى أدنى تكبير
+        const x0 = -N, x1 = 1 + N;
         this.quadBuffer = gl.createBuffer();
         gl.bindBuffer(gl.ARRAY_BUFFER, this.quadBuffer);
-        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([nw.x, nw.y, sw.x, sw.y, ne.x, ne.y, se.x, se.y]), gl.STATIC_DRAW);
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([x0, yN, x0, yS, x1, yN, x1, yS]), gl.STATIC_DRAW);
 
         this.loadImageInto(gl, this.maskTexture, `${import.meta.env.BASE_URL}landmask.png`, () => { this.maskReady = true; });
         this.loadValue(gl);
