@@ -38,6 +38,7 @@ import { useWeatherStore }    from '../../store/weatherStore';
 import { useWeatherData }     from './hooks/useWeatherData';
 import { weatherGridService } from '../../services/weatherGridService';
 import { rasterSampler }      from '../../services/rasterSampler';
+import { queuePrefetchImage } from '../../services/prefetchQueue';
 import { getStableGridBounds } from './utils/gridBounds';
 import { layerBaseIsDark }     from './webgl/layerOrder';
 import { useAutoplay }        from './hooks/useAutoplay';
@@ -196,8 +197,7 @@ export function NewWeatherMap() {
                 if (warmedRasters.has(src)) continue;   // أُحمي للتوّ — لا نكرّر الطلب كل تغيّر إطار
                 warmedRasters.add(src);
                 if (warmedRasters.size > 600) warmedRasters.clear();  // يسمح بإعادة الإحماء بعد انتهاء كاش 30د
-                const img = new Image();
-                img.src = src;
+                queuePrefetchImage(src);                // عبر طابور التزامن — لا نغرق الخادم المشترك
             }
         }
     }, [rasterDir, useRaster, activeHeatmapType, visibleLayers.wind, currentTimeIndex, isPlaying, frameHours]);

@@ -84,8 +84,16 @@ export function useWindRaster(timeIndex: number, dir = 'rasters/'): WeatherGrid 
             }
             setGrid(makeGrid(flat));
         };
-        img.onerror = () => { /* الساعة غير مولَّدة — نُبقي آخر شبكة */ };
-        img.src = `${import.meta.env.BASE_URL}${dir}wind_${String(timeIndex).padStart(3, '0')}.png`;
+        let retries = 2;
+        const src = `${import.meta.env.BASE_URL}${dir}wind_${String(timeIndex).padStart(3, '0')}.png`;
+        img.onerror = () => {
+            // فشل عابر (قطع HTTP/2 على الاستضافة المشتركة) → إعادة محاولة بمهلة؛
+            // وإن نفدت المحاولات (الساعة غير مولَّدة) نُبقي آخر شبكة.
+            if (cancelled || retries <= 0) return;
+            retries -= 1;
+            window.setTimeout(() => { if (!cancelled) img.src = src; }, 1200);
+        };
+        img.src = src;
         return () => { cancelled = true; };
     }, [timeIndex, dir]);
 

@@ -188,9 +188,16 @@ export class RasterHeatmapGLLayer implements CustomLayerInterface {
         this.loadImageInto(gl, this.valueTexture2, this.url2, () => { this.valueReady2 = true; });
     }
 
-    private loadImageInto(gl: GLContext, tex: WebGLTexture, src: string, onReady: (w: number, h: number) => void) {
+    private loadImageInto(gl: GLContext, tex: WebGLTexture, src: string, onReady: (w: number, h: number) => void, retries = 2) {
         const img = new Image();
         img.crossOrigin = 'anonymous';
+        // فشل الشبكة العابر (قطع تدفّق HTTP/2 على الاستضافة المشتركة) — نعيد المحاولة بمهلة.
+        img.onerror = () => {
+            if (this.destroyed || retries <= 0) return;
+            window.setTimeout(() => {
+                if (!this.destroyed) this.loadImageInto(gl, tex, src, onReady, retries - 1);
+            }, 1200);
+        };
         img.onload = () => {
             // قد تصل الصورة بعد إزالة الطبقة (سباق StrictMode/تبديل سريع) — والنسيج
             // حينها محذوف؛ الربط به يرمي INVALID_OPERATION. نتحقّق قبل أي استخدام.

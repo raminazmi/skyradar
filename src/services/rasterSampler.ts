@@ -14,6 +14,7 @@
 
 import type { ForecastGridType } from '../config/weatherLayers';
 import { VALUE_RANGES, WIND_UV_MAX } from '../components/WeatherMap/webgl/weatherTextures';
+import { queuePrefetch } from './prefetchQueue';
 
 const WIND_SPEED_MAX = 120; // يطابق VALUE_RANGES['wind'] و WIND_SPEED_MAX في السكربت
 
@@ -104,9 +105,12 @@ class RasterSampler {
         });
     }
 
-    /** يضمن تحميل نسيج طبقة/إطار مسبقاً (للاستدعاء من الخطافات قبل المرور). */
+    /** يضمن تحميل نسيج طبقة/إطار مسبقاً (للاستدعاء من الخطافات قبل المرور).
+     * يمرّ عبر طابور التزامن — إحماء غير عاجل يجب ألّا يغرق الاستضافة المشتركة. */
     prefetch(type: ForecastGridType | 'wind', idx: number): void {
-        void this.loadField(type, idx);
+        const key = `${type}_${idx}`;
+        if (this.fields.has(key) || this.loading.has(key)) return;
+        queuePrefetch(() => this.loadField(type, idx));
     }
 
     /** يحمّل النسيج وينتظره — لبناء شبكة (مثل حقل الرياح) من الصورة. */
