@@ -135,17 +135,19 @@ export function styleWeatherBase(map: MaplibreMap, darkMode: boolean, activeLaye
     // مضلّع الماء فوق المحيطات، فيظهر البحر "شبه فارغ" بينما تظهر اليابسة ملوّنة.
     // الحلّ: نجعلها شفّافة تماماً فيغطّي حقل الطقس البرّ والبحر بالتساوي، ويبقى خطّ
     // الساحل (continent-coastline) والحدود والتسميات فوقه كخطوط واضحة.
+    // الطبقات كاملة التغطية (حرارة/رياح/ضغط/رطوبة…) تُرسم معتمة 100% مثل Zoom Earth —
+    // أي صبغة يابسة/ماء فوقها تكسو الألوان وتبهتها، فنجعل المضلّعات شفّافة تماماً معها.
+    // الطبقات المتفرّقة (أمطار/غيوم/لا طبقة) تحتاج تمييز البرّ/البحر فنُبقي لمسة خفيفة.
+    const fullCoverage = !!activeLayer && activeLayer !== 'precipitation' && activeLayer !== 'clouds';
     for (const l of ['landcover', 'landuse', 'landuse_residential', 'landcover_wood',
                      'landcover_grass', 'park', 'park_national_park', 'park_nature_reserve',
                      'national_park', 'wood', 'grass', 'globallandcover']) {
         set(l, 'fill-color', land);
-        // شفافية منخفضة: القاعدة الفستقية تأتي أساساً من الخلفية تحت الطقس، وهذه الطبقة
-        // فوق الطقس فنُبقيها خفيفة جداً كي لا تكسو ألوان الحرارة بميلٍ أخضر على اليابسة.
-        set(l, 'fill-opacity', 0.10);
+        set(l, 'fill-opacity', fullCoverage ? 0 : 0.10);
     }
     for (const l of ['water', 'water_shadow', 'ocean']) {
         set(l, 'fill-color', water);
-        set(l, 'fill-opacity', 0.12); // لمسة خفيفة تميّز البحر بصرياً دون كتم لون الطقس
+        set(l, 'fill-opacity', fullCoverage ? 0 : 0.12);
     }
     for (const l of ['building', 'building-top']) {
         set(l, 'fill-opacity', 0.5);

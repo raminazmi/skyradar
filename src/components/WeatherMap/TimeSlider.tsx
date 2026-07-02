@@ -43,13 +43,11 @@ export function TimeSlider({ times, currentTimeIndex, isPlaying }: TimeSliderPro
     } = useWeatherStore();
     const sliderRef = useRef<HTMLDivElement>(null);
 
-    // الموضع المستمرّ = الإطار + كسره. السحب يثبّت على خطوات 10 دقائق (1/6 ساعة) مثل Zoom Earth.
-    const handleSliderClick = (event: React.MouseEvent<HTMLDivElement>) => {
-        if (!sliderRef.current || times.length <= 1) {
-            return;
-        }
+    // الموضع المستمرّ = الإطار + كسره، مثبّتاً على خطوات 10 دقائق (1/6 ساعة) مثل Zoom Earth.
+    const seekToPosition = (clientX: number) => {
+        if (!sliderRef.current || times.length <= 1) return;
         const rect = sliderRef.current.getBoundingClientRect();
-        const position = clamp((event.clientX - rect.left) / rect.width, 0, 1);
+        const position = clamp((clientX - rect.left) / rect.width, 0, 1);
         const exact = position * (times.length - 1);
         const snapped = Math.round(exact * 6) / 6;          // خطوة 10 دقائق
         const idx = clamp(Math.floor(snapped), 0, times.length - 1);
@@ -57,9 +55,28 @@ export function TimeSlider({ times, currentTimeIndex, isPlaying }: TimeSliderPro
         setFrameFraction(idx >= times.length - 1 ? 0 : snapped - idx);
     };
 
+    // سحب متواصل على الشريط (مؤشّر/لمس) — يتتبّع الإصبع بخطوات 10 دقائق مثل Zoom Earth.
+    const handlePointerDown = (event: React.PointerEvent<HTMLDivElement>) => {
+        event.currentTarget.setPointerCapture(event.pointerId);
+        seekToPosition(event.clientX);
+    };
+    const handlePointerMove = (event: React.PointerEvent<HTMLDivElement>) => {
+        if (event.buttons & 1) seekToPosition(event.clientX);
+    };
+
     const jumpBy = (delta: number) => {
         setCurrentTimeIndex(clamp(currentTimeIndex + delta, 0, Math.max(0, times.length - 1)));
         setFrameFraction(0);
+    };
+
+    // خطوة 10 دقائق (1/6 إطار) للأمام/الخلف — تنقّل دقيق مثل Zoom Earth.
+    const jumpMinutes = (dir: 1 | -1) => {
+        const maxPos = Math.max(0, times.length - 1);
+        const pos = clamp(currentTimeIndex + frameFraction + dir / 6, 0, maxPos);
+        const snapped = Math.round(pos * 6) / 6;
+        const idx = clamp(Math.floor(snapped), 0, maxPos);
+        setCurrentTimeIndex(idx);
+        setFrameFraction(idx >= maxPos ? 0 : snapped - idx);
     };
 
     const jumpByDays = (days: number) => {
@@ -88,7 +105,13 @@ export function TimeSlider({ times, currentTimeIndex, isPlaying }: TimeSliderPro
     return (
         <div className="time-slider-container">
             <div className="time-slider-track-shell">
-                <div className="slider-track" ref={sliderRef} onClick={handleSliderClick}>
+                <div
+                    className="slider-track"
+                    ref={sliderRef}
+                    onPointerDown={handlePointerDown}
+                    onPointerMove={handlePointerMove}
+                    style={{ touchAction: 'none' }}
+                >
                     <div className="slider-progress" style={{ width: `${progressPercentage}%` }} />
                     <div className="slider-handle" style={{ left: `${progressPercentage}%` }}>
                         <div className="handle-circle" />
@@ -139,8 +162,8 @@ export function TimeSlider({ times, currentTimeIndex, isPlaying }: TimeSliderPro
                     <div className="time-selector time-selector-hour">
                         <button
                             className="time-arrow-btn"
-                            onClick={() => jumpBy(1)}
-                            title="الساعة التالية"
+                            onClick={() => jumpMinutes(1)}
+                            title="بعد 10 دقائق"
                             type="button"
                         >
                             <FiChevronUp />
@@ -148,8 +171,8 @@ export function TimeSlider({ times, currentTimeIndex, isPlaying }: TimeSliderPro
                         <div className="time-selector-value time-selector-time">{hourLabel}</div>
                         <button
                             className="time-arrow-btn"
-                            onClick={() => jumpBy(-1)}
-                            title="الساعة السابقة"
+                            onClick={() => jumpMinutes(-1)}
+                            title="قبل 10 دقائق"
                             type="button"
                         >
                             <FiChevronDown />

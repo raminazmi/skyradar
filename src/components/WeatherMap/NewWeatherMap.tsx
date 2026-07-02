@@ -284,7 +284,7 @@ export function NewWeatherMap() {
 
                         {/* طبقة هيتماب الرياح — WebGL */}
                         {visibleLayers.wind && windGrid && (
-                            <HeatmapWebGLLayer id="weather-heatmap-wind" grid={windGrid} type="wind" opacity={0.8} />
+                            <HeatmapWebGLLayer id="weather-heatmap-wind" grid={windGrid} type="wind" opacity={1} />
                         )}
 
                         {/* الحرارة: نسيج عالمي خام بدقّة كاملة (GFS GRIB2) — مطابقة Zoom Earth */}
@@ -295,7 +295,7 @@ export function NewWeatherMap() {
                                 urlNext={`${import.meta.env.BASE_URL}${rasterDir}${activeHeatmapType}_${String(Math.min(currentTimeIndex + 1, frameHours - 1)).padStart(3, '0')}.png`}
                                 blend={frameFraction}
                                 type={activeHeatmapType}
-                                opacity={activeHeatmapType === 'clouds' ? 0.6 : activeHeatmapType === 'precipitation' ? 0.85 : 0.98}
+                                opacity={activeHeatmapType === 'clouds' ? 0.6 : activeHeatmapType === 'precipitation' ? 0.85 : 1}
                             />
                         )}
 
@@ -305,7 +305,7 @@ export function NewWeatherMap() {
                                 id="weather-heatmap-scalar"
                                 tiles={scalarTiles}
                                 type={activeHeatmapType}
-                                opacity={activeHeatmapType === 'clouds' ? 0.6 : activeHeatmapType === 'precipitation' ? 0.85 : 0.92}
+                                opacity={activeHeatmapType === 'clouds' ? 0.6 : activeHeatmapType === 'precipitation' ? 0.85 : 1}
                             />
                         )}
 
