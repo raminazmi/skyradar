@@ -34,12 +34,25 @@ function normalizeLongitude(value: number): number {
     return ((((value + 180) % 360) + 360) % 360) - 180;
 }
 
+/** سقف الكاش: كل حقل ImageData بالدقة الكاملة (~1-4MB) — بلا سقف كان يتضخّم أثناء التشغيل. */
+const MAX_FIELDS = 16;
+
 class RasterSampler {
     private fields = new Map<string, RasterField>();
     private loading = new Map<string, Promise<RasterField | null>>();
+    private dir = 'rasters/';
+
+    /** يتبع مجلد النموذج المختار (rasters/ ↔ rasters/ecmwf/ ↔ rasters/icon/) — تحدّده الواجهة. */
+    setDir(dir: string): void {
+        if (dir === this.dir) return;
+        this.dir = dir;
+        // الحقول القديمة تخصّ نموذجاً آخر — نفرغ الكاش كي لا تُقرأ قيم النموذج الخطأ.
+        this.fields.clear();
+        this.loading.clear();
+    }
 
     private url(type: ForecastGridType | 'wind', idx: number): string {
-        return `${import.meta.env.BASE_URL}rasters/${type}_${String(idx).padStart(3, '0')}.png`;
+        return `${import.meta.env.BASE_URL}${this.dir}${type}_${String(idx).padStart(3, '0')}.png`;
     }
 
     /** يحمّل صورة في ImageData (مع رجوع للإطار 000 إن لم يتوفّر الإطار المطلوب). */
@@ -53,7 +66,14 @@ class RasterSampler {
         const task = this.decode(this.url(type, idx))
             .catch(() => (idx === 0 ? null : this.decode(this.url(type, 0)).catch(() => null)))
             .then((field) => {
-                if (field) this.fields.set(key, field);
+                if (field) {
+                    this.fields.set(key, field);
+                    while (this.fields.size > MAX_FIELDS) {
+                        const oldest = this.fields.keys().next().value;
+                        if (oldest === undefined) break;
+                        this.fields.delete(oldest);
+                    }
+                }
                 this.loading.delete(key);
                 return field;
             });

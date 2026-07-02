@@ -76,31 +76,49 @@ function buildIsobars(grid: Float32Array): FeatureCollection {
     return { type: 'FeatureCollection', features };
 }
 
+// كاش النتائج المحسوبة (المفتاح: مجلّد النموذج + الإطار) — الحساب حتمي لنفس النسيج،
+// فالترجيع/إعادة التشغيل لا يعيدان الفكّ ولا Marching Squares إطلاقاً.
+const ISOBAR_CACHE_MAX = 30;
+const isobarCache = new Map<string, FeatureCollection>();
+
 export function usePressureIsobars(timeIndex: number, dir: string, enabled: boolean): FeatureCollection | null {
     const [data, setData] = useState<FeatureCollection | null>(null);
 
     useEffect(() => {
         if (!enabled) { setData(null); return; }
+        const key = `${dir}${timeIndex}`;
+        const cached = isobarCache.get(key);
+        if (cached) { setData(cached); return; }
         let cancelled = false;
         const img = new Image();
         img.crossOrigin = 'anonymous';
         img.onload = () => {
             if (cancelled) return;
-            const cv = document.createElement('canvas');
-            cv.width = W; cv.height = H;
-            const ctx = cv.getContext('2d', { willReadFrequently: true });
-            if (!ctx) return;
-            ctx.drawImage(img, 0, 0, W, H);
-            const px = ctx.getImageData(0, 0, W, H).data;
-            const grid = new Float32Array(W * H);
-            for (let r = 0; r < H; r++) {
-                // صفّ الصورة 0 = أعلى = الجنوب (النسيج مقلوب) → نطابق latOf(0)=-90
-                for (let c = 0; c < W; c++) {
-                    const i = (r * W + c) * 4;
-                    grid[r * W + c] = P_MIN + (px[i] / 255) * (P_MAX - P_MIN);
+            // نؤجّل الفكّ والحساب خارج معالج onload كي لا يزاحما إطار الرسم الحالي.
+            window.setTimeout(() => {
+                if (cancelled) return;
+                const cv = document.createElement('canvas');
+                cv.width = W; cv.height = H;
+                const ctx = cv.getContext('2d', { willReadFrequently: true });
+                if (!ctx) return;
+                ctx.drawImage(img, 0, 0, W, H);
+                const px = ctx.getImageData(0, 0, W, H).data;
+                const grid = new Float32Array(W * H);
+                for (let r = 0; r < H; r++) {
+                    // صفّ الصورة 0 = أعلى = الجنوب (النسيج مقلوب) → نطابق latOf(0)=-90
+                    for (let c = 0; c < W; c++) {
+                        const i = (r * W + c) * 4;
+                        grid[r * W + c] = P_MIN + (px[i] / 255) * (P_MAX - P_MIN);
+                    }
                 }
-            }
-            setData(buildIsobars(grid));
+                const result = buildIsobars(grid);
+                isobarCache.set(key, result);
+                if (isobarCache.size > ISOBAR_CACHE_MAX) {
+                    const oldest = isobarCache.keys().next().value;
+                    if (oldest !== undefined) isobarCache.delete(oldest);
+                }
+                setData(result);
+            }, 0);
         };
         img.onerror = () => { /* الساعة غير مولَّدة — نُبقي آخر نتيجة */ };
         img.src = `${import.meta.env.BASE_URL}${dir}pressure_${String(timeIndex).padStart(3, '0')}.png`;

@@ -121,7 +121,22 @@ export class RasterHeatmapGLLayer implements CustomLayerInterface {
         this.opacity = opacity;
     }
 
-    setUrl(url: string) { if (url !== this.url) { this.url = url; if (this.map) this.loadValue(this.mapGL()); } }
+    setUrl(url: string) {
+        if (url === this.url) return;
+        // تقدّم الشريط: الإطار "التالي" صار الحالي — نبدّل النسيجين على الـ GPU مباشرة
+        // بدل إعادة تنزيل/فكّ الصورة نفسها (يلغي وميض/كلفة كل خطوة تشغيل).
+        if (url === this.url2 && this.valueReady2 && this.valueTexture && this.valueTexture2) {
+            [this.valueTexture, this.valueTexture2] = [this.valueTexture2, this.valueTexture];
+            this.valueReady = true;
+            this.valueReady2 = false;
+            this.url = url;
+            this.url2 = '';
+            this.map?.triggerRepaint();
+            return;
+        }
+        this.url = url;
+        if (this.map) this.loadValue(this.mapGL());
+    }
     // الإطار التالي ونسبة المزج للاستيفاء الزمني. blend=0 → الإطار الحالي فقط.
     setNextUrl(url: string) {
         if (url === this.url2) return;

@@ -37,6 +37,7 @@ import { MapContext }           from './MapContext';
 import { useWeatherStore }    from '../../store/weatherStore';
 import { useWeatherData }     from './hooks/useWeatherData';
 import { weatherGridService } from '../../services/weatherGridService';
+import { rasterSampler }      from '../../services/rasterSampler';
 import { getStableGridBounds } from './utils/gridBounds';
 import { layerBaseIsDark }     from './webgl/layerOrder';
 import { useAutoplay }        from './hooks/useAutoplay';
@@ -58,6 +59,10 @@ const DARK_MAP_STYLE = 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/st
 const RASTER_TYPES = new Set<string>([
     'temperature', 'feels-like', 'wet-bulb', 'dewpoint', 'humidity', 'pressure', 'clouds', 'wind-gusts', 'precipitation',
 ]);
+
+// روابط النُسج التي أُطلق إحماؤها (Image) — يمنع إعادة إنشاء طلب لكل إطار مجاور عند كل
+// تغيّر وقت. يُفرَّغ عند امتلائه فيُعاد الإحماء بما يتوافق مع كاش المتصفح (30 دقيقة).
+const warmedRasters = new Set<string>();
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 
@@ -95,6 +100,8 @@ export function NewWeatherMap() {
     const rasterDir = selectedModel === 'ECMWF' ? 'rasters/ecmwf/'
         : selectedModel === 'ICON' ? 'rasters/icon/'
         : 'rasters/';
+    // قارئ التلميح/تسميات المدن يتبع نفس المجلّد — وإلا عرض قيم GFS مع نموذج آخر.
+    useEffect(() => { rasterSampler.setDir(rasterDir); }, [rasterDir]);
     const useRaster = !!activeHeatmapType && RASTER_TYPES.has(activeHeatmapType)
         && (selectedModel === 'GFS' || selectedModel === 'ECMWF' || selectedModel === 'ICON');
 
@@ -137,7 +144,9 @@ export function NewWeatherMap() {
     useEffect(() => {
         let cancelled = false;
         setRasterMeta(null);
-        fetch(`${import.meta.env.BASE_URL}${rasterDir}meta.json`, { cache: 'no-store' })
+        // كاش HTTP عادي: .htaccess يمنح meta.json خمس دقائق (الدورة كل 6 ساعات) —
+        // no-store كان يفرض رحلة شبكة كاملة عند كل تبديل نموذج.
+        fetch(`${import.meta.env.BASE_URL}${rasterDir}meta.json`, { cache: 'default' })
             .then((r) => (r.ok ? r.json() : null))
             .then((m) => { if (!cancelled && m && m.run_epoch) setRasterMeta(m); })
             .catch(() => { /* بلا meta: نسقط على السلوك الافتراضي (إزاحة 0) */ });
@@ -179,11 +188,16 @@ export function NewWeatherMap() {
         if (useRaster && activeHeatmapType) types.push(activeHeatmapType);
         if (visibleLayers.wind) types.push('wind');
         for (const type of types) {
-            for (let d = -1; d <= ahead; d += 1) {
-                const idx = currentTimeIndex + d;
+            // الإطار الحالي أولاً (يظهر فوراً عند فتح الطبقة) ثم الجوار.
+            for (let d = 0; d <= ahead + 1; d += 1) {
+                const idx = currentTimeIndex + (d === ahead + 1 ? -1 : d);
                 if (idx < 0 || idx >= frameHours) continue;
+                const src = `${dir}${type}_${String(idx).padStart(3, '0')}.png`;
+                if (warmedRasters.has(src)) continue;   // أُحمي للتوّ — لا نكرّر الطلب كل تغيّر إطار
+                warmedRasters.add(src);
+                if (warmedRasters.size > 600) warmedRasters.clear();  // يسمح بإعادة الإحماء بعد انتهاء كاش 30د
                 const img = new Image();
-                img.src = `${dir}${type}_${String(idx).padStart(3, '0')}.png`;
+                img.src = src;
             }
         }
     }, [rasterDir, useRaster, activeHeatmapType, visibleLayers.wind, currentTimeIndex, isPlaying, frameHours]);

@@ -5,6 +5,11 @@
     <FilesMatch "\.png$">
         Header set Cache-Control "public, max-age=1800"
     </FilesMatch>
+    # meta.json: 5 دقائق كافية (الدورة كل 6 ساعات) — يلغي رحلة شبكة عند كل تبديل نموذج،
+    # و must-revalidate يجعل ما بعد الانتهاء طلب 304 رخيصاً (ETag).
+    <FilesMatch "^meta\.json$">
+        Header set Cache-Control "public, max-age=300, must-revalidate"
+    </FilesMatch>
 </IfModule>
 <IfModule mod_expires.c>
     ExpiresActive On
