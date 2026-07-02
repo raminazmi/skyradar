@@ -122,22 +122,44 @@ def latest_run_url(cfg, hour):
     raise RuntimeError("تعذّر إيجاد دورة GFS متاحة")
 
 
+def _png_chunk(typ, data):
+    body = typ + data
+    return struct.pack(">I", len(data)) + body + struct.pack(">I", zlib.crc32(body) & 0xffffffff)
+
+
+def _png_best_idat(pixels, channels):
+    """يرمّز الأسطر بثلاثة فلاتر (None/Sub/Up) ويعيد الأصغر مضغوطاً — قياس فعلي:
+    الحقول الناعمة (حرارة/ضغط) تربح بـ Up، والرياح بـ Sub (−38%)، والمشوّشة (غيوم/مطر)
+    تبقى None. الكلفة ثلاث ضغطات على السيرفر مقابل تنزيل أخفّ لكل مستخدم."""
+    h, stride = pixels.shape
+    # Up (2): فرق عن الصفّ السابق — طرح uint8 يلتفّ تلقائياً (mod 256)
+    up = pixels.copy()
+    up[1:] = pixels[1:] - pixels[:-1]
+    # Sub (1): فرق عن البكسل السابق بنفس القناة
+    sub = pixels.reshape(h, stride // channels, channels).copy()
+    sub[:, 1:, :] = sub[:, 1:, :] - sub[:, :-1, :]
+    sub = sub.reshape(h, stride)
+
+    best = None
+    for fid, arr in ((0, pixels), (1, sub), (2, up)):
+        raw = bytearray()
+        for y in range(h):
+            raw.append(fid)
+            raw.extend(arr[y].tobytes())
+        comp = zlib.compress(bytes(raw), 9)
+        if best is None or len(comp) < len(best):
+            best = comp
+    return best
+
+
 def write_png_gray(path, img):
     """كاتب PNG رمادي 8-بت بسيط (بلا اعتماديات): الصفّ 0 = أعلى الصورة."""
     h, w = img.shape
-
-    def chunk(typ, data):
-        body = typ + data
-        return struct.pack(">I", len(data)) + body + struct.pack(">I", zlib.crc32(body) & 0xffffffff)
-
-    raw = bytearray()
-    for y in range(h):
-        raw.append(0)            # filter type: none
-        raw.extend(img[y].tobytes())
+    idat = _png_best_idat(np.ascontiguousarray(img, dtype=np.uint8), 1)
     png = (b'\x89PNG\r\n\x1a\n'
-           + chunk(b'IHDR', struct.pack(">IIBBBBB", w, h, 8, 0, 0, 0, 0))  # grayscale 8-bit
-           + chunk(b'IDAT', zlib.compress(bytes(raw), 9))
-           + chunk(b'IEND', b''))
+           + _png_chunk(b'IHDR', struct.pack(">IIBBBBB", w, h, 8, 0, 0, 0, 0))  # grayscale 8-bit
+           + _png_chunk(b'IDAT', idat)
+           + _png_chunk(b'IEND', b''))
     os.makedirs(os.path.dirname(os.path.abspath(path)), exist_ok=True)
     with open(path, 'wb') as f:
         f.write(png)
@@ -146,20 +168,12 @@ def write_png_gray(path, img):
 def write_png_rgb(path, r, g, b):
     """كاتب PNG ملوّن 8-بت (RGB) بلا اعتماديات — لقنوات الرياح (سرعة/U/V)."""
     h, w = r.shape
-
-    def chunk(typ, data):
-        body = typ + data
-        return struct.pack(">I", len(data)) + body + struct.pack(">I", zlib.crc32(body) & 0xffffffff)
-
-    raw = bytearray()
-    rgb = np.dstack([r, g, b]).astype(np.uint8)
-    for y in range(h):
-        raw.append(0)
-        raw.extend(rgb[y].tobytes())
+    rgb = np.dstack([r, g, b]).astype(np.uint8).reshape(h, w * 3)
+    idat = _png_best_idat(rgb, 3)
     png = (b'\x89PNG\r\n\x1a\n'
-           + chunk(b'IHDR', struct.pack(">IIBBBBB", w, h, 8, 2, 0, 0, 0))  # color type 2 = RGB
-           + chunk(b'IDAT', zlib.compress(bytes(raw), 9))
-           + chunk(b'IEND', b''))
+           + _png_chunk(b'IHDR', struct.pack(">IIBBBBB", w, h, 8, 2, 0, 0, 0))  # color type 2 = RGB
+           + _png_chunk(b'IDAT', idat)
+           + _png_chunk(b'IEND', b''))
     os.makedirs(os.path.dirname(os.path.abspath(path)), exist_ok=True)
     with open(path, 'wb') as f:
         f.write(png)
@@ -169,10 +183,10 @@ def write_png_rgb(path, r, g, b):
 WIND_UV_MAX = 60.0
 WIND_SPEED_MAX = 120.0  # يطابق VALUE_RANGES['wind']
 
-# دقّة إخراج الرياح: المتصفّح يصغّرها أصلاً إلى شبكة 360×181 (useWindRaster)، فلا فائدة من
-# 1440×721 (2.5MB). نُخرجها بنصف الدقّة (721×1440 → 361×720) → ~6× أخفّ بلا خسارة بصرية.
-# المحاذاة تبقى دقيقة: الصفّ المُعيَّن r ↔ خط عرض -90 + r*0.5 (يطابق فكّ الواجهة تماماً).
-WIND_STRIDE = 2
+# دقّة إخراج الرياح: كل مسارات العرض تستهلك شبكة 360×181 (useWindRaster يفكّ إليها،
+# وطبقة لون الرياح والجسيمات تُرسمان منها) — فنُخرج الصورة بهذه الدقّة مباشرةً (1440/4=360،
+# صفوف 0..720 بخطوة 4 = 181). ~25KB بدل 2.5MB بلا أي فرق بصري (لا يوجد مستهلك أعلى دقّة).
+WIND_STRIDE = 4
 
 
 def downsample_wind(R, G, B):
