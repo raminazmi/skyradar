@@ -63,6 +63,12 @@ export class ParticleGLLayer implements CustomLayerInterface {
     private settings: ParticleSettings = { speed: 1, trail: 0.95, opacity: 0.85, density: 0.95 };
     private darkMode = true;
 
+    // جودة متكيّفة مع الأداء: متوسّط متحرك لزمن الإطار — إن تجاوز ~22ms نخفض عدد الجسيمات
+    // المرسومة تدريجياً (حتى 30%) وإن عاد سريعاً (<14ms) نرفعه. يمنع هبوط الموبايل لـ 30fps.
+    private lastFrameTs = 0;
+    private frameMsEma = 16.7;
+    private quality = 1;
+
     constructor(id: string, settings?: Partial<ParticleSettings>, darkMode = true) {
         this.id = id;
         this.darkMode = darkMode;
@@ -188,7 +194,18 @@ export class ParticleGLLayer implements CustomLayerInterface {
         const minCount = Math.round(0.03 * this.numParticles);
         const maxCount = this.numParticles;
         const zoomCount = minCount + (maxCount - minCount) * (zoomT * zoomT);
-        this.numDrawn = Math.round(zoomCount * Math.max(0.05, this.settings.density));
+
+        // قياس زمن الإطار الفعلي (هذه الطبقة تعيد الرسم باستمرار فالفاصل = زمن الإطار)
+        const now = performance.now();
+        if (this.lastFrameTs > 0) {
+            const dt = Math.min(100, now - this.lastFrameTs);
+            this.frameMsEma += (dt - this.frameMsEma) * 0.05;
+            if (this.frameMsEma > 22) this.quality = Math.max(0.3, this.quality - 0.02);
+            else if (this.frameMsEma < 14) this.quality = Math.min(1, this.quality + 0.01);
+        }
+        this.lastFrameTs = now;
+
+        this.numDrawn = Math.round(zoomCount * Math.max(0.05, this.settings.density) * this.quality);
 
         // مهم: MapLibre قد يترك CULL_FACE/DEPTH_TEST مفعّلين فيُقصّ الرباعيات → نعطّلهما.
         gl.disable(gl.CULL_FACE);

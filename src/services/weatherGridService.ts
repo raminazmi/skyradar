@@ -14,11 +14,23 @@ export interface GridPoint {
     direction?: number;
 }
 
+/**
+ * تمثيل مسطّح للشبكة بمصفوفات مكتوبة (row-major، الصفّ 0 = الجنوب) — بديل خفيف عن
+ * points للشبكات الكبيرة (الرياح 360×181): بلا آلاف الكائنات وبلا ضغط على GC.
+ * عند توفّره تتجاهل مسارات الـ GPU (buildValueTexture) مصفوفة points كلياً.
+ */
+export interface FlatGridData {
+    value: Float32Array;
+    u?: Float32Array;
+    v?: Float32Array;
+}
+
 export interface WeatherGrid {
     bounds: { north: number; south: number; east: number; west: number };
     rows: number;
     cols: number;
     points: GridPoint[][];
+    flat?: FlatGridData;
     timestamp: string;
     type: ForecastGridType;
     samplingResolution?: number;

@@ -83,11 +83,33 @@ export function buildValueTexture(grid: WeatherGrid): {
     width: number;
     height: number;
 } {
-    const { rows, cols, points, type } = grid;
+    const { rows, cols, points, type, flat } = grid;
     const data = new Uint8Array(cols * rows * 4);
 
     // مجال U/V للرياح (km/h تقريباً) لتطبيع المركّبات في القناتين G/B.
     const UV_MAX = WIND_UV_MAX;
+
+    // مسار سريع: الشبكات المسطّحة (الرياح من النسيج المحلّي) — حلقة رقمية بلا كائنات.
+    if (flat) {
+        const { value, u, v } = flat;
+        const [min, max] = VALUE_RANGES[type];
+        const span = max - min;
+        for (let i = 0; i < rows * cols; i++) {
+            const idx = i * 4;
+            const val = value[i];
+            if (!Number.isFinite(val)) { data[idx + 3] = 0; continue; }
+            data[idx + 0] = Math.round(Math.max(0, Math.min(1, (val - min) / span)) * 255);
+            if (u && v) {
+                data[idx + 1] = Math.round((Math.max(-UV_MAX, Math.min(UV_MAX, u[i])) / UV_MAX * 0.5 + 0.5) * 255);
+                data[idx + 2] = Math.round((Math.max(-UV_MAX, Math.min(UV_MAX, v[i])) / UV_MAX * 0.5 + 0.5) * 255);
+            } else {
+                data[idx + 1] = 128;
+                data[idx + 2] = 128;
+            }
+            data[idx + 3] = 255;
+        }
+        return { data, width: cols, height: rows };
+    }
 
     for (let r = 0; r < rows; r++) {
         for (let c = 0; c < cols; c++) {
